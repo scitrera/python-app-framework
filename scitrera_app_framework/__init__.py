@@ -7,6 +7,7 @@ from .util import (
     ext_parse_bool, ext_parse_csv,
 )
 from .base_plugins import (
+    register_package_plugins,
     EXT_BACKGROUND_EXEC, get_background_exec,
     EXT_PROGRESS_TRACKER, get_progress_tracker,
 )
@@ -17,7 +18,6 @@ def init_framework(*args, **kwargs):
 
     # import all base_plugins
     from . import base_plugins
-    from .base_plugins import register_package_plugins
     register_package_plugins(base_plugins.__name__, v)
 
     # register shutdown function to shut down plugins upon initializing plugins...

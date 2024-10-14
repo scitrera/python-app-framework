@@ -1,5 +1,7 @@
+from abc import ABCMeta
 import pkgutil
 import importlib
+import inspect
 
 
 def import_modules(package_name, recursive=True):
@@ -15,13 +17,13 @@ def import_modules(package_name, recursive=True):
     return
 
 
-def find_types_in_modules(package_name, base_type, recursive=True, exclude_base_type=True):
+def find_types_in_modules(package_name, base_type, recursive=True, exclude_base_type=True, exclude_abstract=True):
     history = set()
     for module in import_modules(package_name, recursive=recursive):
         for attr_name in dir(module):
             attr = getattr(module, attr_name)
-            if (isinstance(attr, type) and issubclass(attr, base_type) and attr not in history
-                    and not (exclude_base_type and attr is base_type)):
+            if (isinstance(attr, type) and issubclass(attr, base_type) and not (exclude_abstract and inspect.isabstract(attr))
+                    and attr not in history and not (exclude_base_type and attr is base_type)):
                 yield attr
                 history.add(attr)
 

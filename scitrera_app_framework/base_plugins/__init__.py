@@ -4,12 +4,14 @@ from .bg_exec import EXT_BACKGROUND_EXEC, JobExecutorEngine
 from .progress_tracker import EXT_PROGRESS_TRACKER, ProgressTracker
 
 
-def register_package_plugins(package, v=None):
+def register_package_plugins(package, v=None, exclusions=()):
     from ..api import Plugin
     from ..util.imports import find_types_in_modules
     from ..core.plugins import register_plugin
 
     for plugin in find_types_in_modules(package, Plugin, recursive=False, exclude_base_type=True):
+        if plugin in exclusions:
+            continue
         register_plugin(plugin, v)
 
     return
