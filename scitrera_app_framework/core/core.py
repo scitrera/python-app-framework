@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import importlib
 import faulthandler
 import logging
 import sys
@@ -13,6 +12,7 @@ from botwinick_utils.util import LOGGING_FORMAT, LOGGING_DATE_FORMAT
 
 from ..util import ext_parse_bool
 from ..api.variables import Variables
+from ..util.imports import get_python_type_by_name
 
 _sigterm_hooks = []
 
@@ -214,30 +214,13 @@ def is_stateful_ready(v: Variables):
     return None
 
 
-def load_python_type_by_name(type_name, expected_parent_type):  # TODO: move upstream?
-    if not type_name:
-        raise ValueError('Invalid type_name')
-
-    # TODO: better to handle errors or to just not and let them bubble up naturally
-    parts = type_name.split('.')
-    pkg = '.'.join(parts[:-1])
-    name = parts[-1]
-
-    pkg = importlib.import_module(pkg)
-    strategy_type = getattr(pkg, name)
-    if issubclass(strategy_type, expected_parent_type):
-        return strategy_type
-
-    raise ValueError('given type name does not match expected type')
-
-
 def load_strategy(v: Variables, parent_type, prefix='STRATEGY'):
     # dynamic strategy loading and configuration
     strategy_kwargs = v.import_from_env_by_prefix(prefix)
     strategy_type_name = strategy_kwargs.pop('type', None)
 
     try:
-        strategy = load_python_type_by_name(strategy_type_name, parent_type)
+        strategy = get_python_type_by_name(strategy_type_name, parent_type)
     except (ValueError, ImportError) as e:
         get_logger(v).error('unable to load strategy "%s": %s', strategy_type_name, e)
         strategy = None

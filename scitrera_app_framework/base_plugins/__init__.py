@@ -1,16 +1,23 @@
-from .bg_exec import EXT_BACKGROUND_EXEC
-from .progress_tracker import EXT_PROGRESS_TRACKER
+from ..api import Variables
+from ..core.plugins import get_extension
+from .bg_exec import EXT_BACKGROUND_EXEC, JobExecutorEngine
+from .progress_tracker import EXT_PROGRESS_TRACKER, ProgressTracker
 
 
-def _register_base_plugins(v=None):
-    # TODO: formalize base plugins registration approach
+def register_package_plugins(package, v=None):
+    from ..api import Plugin
+    from ..util.imports import find_types_in_modules
+    from ..core.plugins import register_plugin
 
-    from scitrera_app_framework.core import register_plugin
-
-    from .bg_exec import BackgroundThreadExecutorPlugin
-    register_plugin(BackgroundThreadExecutorPlugin, v=v)
-
-    from .progress_tracker import ProgressTrackerPlugin
-    register_plugin(ProgressTrackerPlugin, v=v)
+    for plugin in find_types_in_modules(package, Plugin, recursive=False, exclude_base_type=True):
+        register_plugin(plugin, v)
 
     return
+
+
+def get_background_exec(v: Variables = None) -> JobExecutorEngine:
+    return get_extension(EXT_BACKGROUND_EXEC, v)
+
+
+def get_progress_tracker(v: Variables = None) -> ProgressTracker:
+    return get_extension(EXT_PROGRESS_TRACKER, v)

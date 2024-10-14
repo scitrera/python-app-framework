@@ -98,7 +98,7 @@ def _init_plugin(name, v: Variables = None, _requested_by=None, _now=False):
     return result
 
 
-def _shutdown_plugins(v: Variables = None):
+def shutdown_plugins(v: Variables = None):
     if v is None:
         v = _get_default_vars_instance()
 

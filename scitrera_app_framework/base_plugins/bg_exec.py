@@ -16,7 +16,7 @@ class BackgroundThreadExecutorPlugin(Plugin):
     def initialize(self, v: Variables, logger: Logger) -> object | None:
         threads = v.environ('SAF_JOB_THREADS', default=DEFAULT_BG_THREADS, type_fn=int)
 
-        engine = JobExecutorEngine(max_workers=threads, name='SAF Job Executor')
+        engine = JobExecutorEngine(max_workers=threads, name='SAF Job Executor', thread_name_prefix='saf-bg-exec')
         return engine
 
     def shutdown(self, v: Variables, logger: Logger, value: object | None) -> None:
