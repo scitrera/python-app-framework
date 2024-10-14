@@ -1,0 +1,4 @@
+setuptools
+botwinick-utils
+vpd
+python-json-logger

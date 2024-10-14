@@ -1,0 +1,29 @@
+import setuptools
+
+with open("README.md", 'r') as f:
+    readme_txt = f.read()
+
+setuptools.setup(
+    name="scitrera-app-framework",
+    version="0.0.1",
+    author="Scitrera LLC",
+    author_email="sales@scitrera.com",
+    description="Common Application Framework Code and Utilities",
+    long_description=readme_txt,
+    long_description_content_type="text/markdown",
+    url="https://github.com/scitrera/python-app-framework",
+    packages=setuptools.find_packages(),
+    install_requires=[
+        'botwinick-utils',
+        'vpd',
+        'python-json-logger',
+    ],
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Developers',
+        'Programming Language :: Python :: 3',
+        'License :: OSI Approved :: BSD License',
+        "Operating System :: OS Independent",
+    ],
+    python_requires='>=3.9',
+)
