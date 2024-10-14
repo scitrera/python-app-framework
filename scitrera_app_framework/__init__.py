@@ -1,6 +1,6 @@
 from .core import (register_shutdown_function, get_logger, get_working_path, get_extension, register_plugin, init_all_plugins,
                    init_framework as _init_framework)
-from .util import ext_parse_bool
+from .util import ext_parse_bool, ext_parse_csv
 from .base_plugins import EXT_BACKGROUND_EXEC, EXT_PROGRESS_TRACKER
 
 
