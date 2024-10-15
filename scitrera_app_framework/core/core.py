@@ -279,7 +279,8 @@ def init_framework(base_app_name: str, v: Variables = None, pyroscope=False, shu
     param_map = {k.lower(): v.environ(k.upper(), default=val) for k, val in params.items()}
 
     # install python fault handler
-    if v.environ('SAF_ENABLE_PYTHON_FAULT_HANDLER', default=fault_handler, type_fn=ext_parse_bool):
+    if v.environ('SAF_ENABLE_PYTHON_FAULT_HANDLER', default=fault_handler, type_fn=ext_parse_bool) and sys.stderr is not None:
+        # TODO: potentially support faulthandler config with different file if stderr is unavailable?
         faulthandler.enable()
 
     # determine app name with suffixes attached
