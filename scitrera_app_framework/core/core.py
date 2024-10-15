@@ -123,15 +123,16 @@ def _init_pyroscope_profiling(v: Variables = None, app_name=None, **tags):
     return
 
 
-def _init_logging(logger_name, level='INFO', formatter=None):
+def _init_logging(logger_name, level='INFO', formatter=None, stream=sys.stderr):
     log_level = logging.getLevelName(level.upper())
     logging.root.setLevel(log_level)
 
     logging.root.handlers.clear()
-    handler = logging.StreamHandler()
-    if formatter is not None:
-        handler.setFormatter(formatter)
-    logging.root.addHandler(handler)
+    if stream is not None:
+        handler = logging.StreamHandler(stream=stream)
+        if formatter is not None:
+            handler.setFormatter(formatter)
+        logging.root.addHandler(handler)
 
     logger = logging.getLogger(logger_name)
     return logger
@@ -301,7 +302,13 @@ def init_framework(base_app_name: str, v: Variables = None, pyroscope=False, shu
             fmt = logging.Formatter(log_format, log_date_format)
         else:
             fmt = logging.Formatter(LOGGING_FORMAT, log_date_format)
-        logger = v.set(_VAR_MAIN_LOGGER, _init_logging(app_name, level=v.environ('LOGGING_LEVEL', default=log_level), formatter=fmt))
+
+        # TODO: mechanism to set stream
+        logger = v.set(_VAR_MAIN_LOGGER, _init_logging(
+            app_name,
+            level=v.environ('LOGGING_LEVEL', default=log_level),
+            formatter=fmt
+        ))
         if build_container_version != 'DEV':
             logger.info('Initializing %s; container=%s, version=%s', app_name, build_image_name, build_container_version)
         else:
