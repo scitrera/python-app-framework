@@ -1,5 +1,5 @@
 from .core import (
-    register_shutdown_function, get_logger, get_working_path,
+    register_shutdown_function, get_logger, get_working_path, get_variables,
     get_extension, register_plugin, init_all_plugins,
     init_framework as _init_framework,
 )

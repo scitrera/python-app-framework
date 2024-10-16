@@ -31,6 +31,12 @@ def _get_default_vars_instance():
     return _default_vars_inst
 
 
+def get_variables(v: Variables = None):
+    if isinstance(v, Variables):
+        return v
+    return _get_default_vars_instance()
+
+
 # noinspection PyCompatibility
 def register_shutdown_function(fn, *args, **kwargs):
     _sigterm_hooks.append((fn, args, kwargs))

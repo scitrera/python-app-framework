@@ -45,6 +45,13 @@ class Plugin(object):
         from scitrera_app_framework.core import get_extension
         return get_extension(self.extension_point_name(v), v)
 
+    def get_logger(self, v: Variables):
+        """
+        Convenience method that returns a child Logger (using extension point name) to the application main logger
+        """
+        from scitrera_app_framework.core import get_logger
+        return get_logger(v).getChild(self.extension_point_name(v))
+
     # noinspection PyMethodMayBeStatic
     def is_enabled(self, v: Variables) -> bool:
         """

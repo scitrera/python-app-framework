@@ -5,7 +5,7 @@ with open("README.md", 'r') as f:
 
 setuptools.setup(
     name="scitrera-app-framework",
-    version="0.0.5",
+    version="0.0.6",
     author="Scitrera LLC",
     author_email="sales@scitrera.com",
     description="Common Application Framework Code and Utilities",
@@ -14,7 +14,7 @@ setuptools.setup(
     url="https://github.com/scitrera/python-app-framework",
     packages=setuptools.find_packages(),
     install_requires=[
-        'botwinick-utils>=0.0.10',
+        'botwinick-utils>=0.0.11',
         'vpd',
         'python-json-logger<3.0.0',
     ],
