@@ -4,7 +4,7 @@ from typing import Type
 
 from ..api.variables import Variables
 from ..api.plugins import Plugin
-from .core import _get_default_vars_instance, register_shutdown_function, get_logger
+from .core import _get_default_vars_instance, get_logger
 
 
 def _plugin_registry(v: Variables = None) -> Variables:

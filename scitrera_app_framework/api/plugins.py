@@ -38,7 +38,7 @@ class Plugin(object):
 
     def get_my_extension(self, v: Variables):
         """
-        Convenience method that loads the extension point value for my extension point. Typically this will be
+        Convenience method that loads the extension point value for my extension point. Typically, this will be
         the result of the `initialize` method; however, it could come from a different plugin that connects at
         the same extension point.
         """
@@ -52,7 +52,7 @@ class Plugin(object):
         from scitrera_app_framework.core import get_logger
         return get_logger(v).getChild(self.extension_point_name(v))
 
-    # noinspection PyMethodMayBeStatic
+    # noinspection PyMethodMayBeStatic,PyUnusedLocal
     def is_enabled(self, v: Variables) -> bool:
         """
         Each plugin can use variables to determine if it should be enabled. This provides a mechanism to differentiate between
@@ -60,7 +60,7 @@ class Plugin(object):
         """
         return True
 
-    # noinspection PyMethodMayBeStatic
+    # noinspection PyMethodMayBeStatic,PyUnusedLocal
     def get_dependencies(self, v: Variables) -> Iterable[str] | None:
         """
         Each plugin may declare other plugins that must initialize before itself

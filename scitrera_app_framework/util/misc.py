@@ -1,6 +1,7 @@
 import time
 
 
+# noinspection PyUnusedLocal
 def no_op(*args, **kwargs):
     return
 

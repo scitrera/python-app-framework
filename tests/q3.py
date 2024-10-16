@@ -1,4 +1,4 @@
-from scitrera_app_framework import (init_framework, register_plugin, get_extension, init_all_plugins, get_working_path, EXT_BACKGROUND_EXEC)
+from scitrera_app_framework import (init_framework, get_extension, EXT_BACKGROUND_EXEC)
 
 if __name__ == '__main__':
     init_framework('test-app-q3')

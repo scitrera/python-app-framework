@@ -48,6 +48,7 @@ def install_signal_hooks(v: Variables = None, via_at_exit=True):
 
     logger = get_logger(v)
 
+    # noinspection PyUnusedLocal
     def sigterm_hook(sig, frame):
         logger.info('received termination signal, processing shutdown calls')
         for (fn, args, kwargs) in reversed(_sigterm_hooks):
@@ -321,6 +322,7 @@ def init_framework(base_app_name: str, v: Variables = None, pyroscope=False, shu
         else:
             logger.info('Initializing %s', app_name)
     else:
+        # noinspection PyUnusedLocal
         logger = v.set(_VAR_MAIN_LOGGER, fixed_logger)
 
     # install signal shutdown hooks (must be on MainThread)
