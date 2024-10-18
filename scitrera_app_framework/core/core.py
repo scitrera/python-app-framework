@@ -139,6 +139,7 @@ def _init_logging(logger_name, level='INFO', formatter=None, stream=sys.stderr):
         handler = logging.StreamHandler(stream=stream)
         if formatter is not None:
             handler.setFormatter(formatter)
+        handler.setLevel(log_level)  # configure handler to use given level
         logging.root.addHandler(handler)
 
     logger = logging.getLogger(logger_name)
@@ -255,26 +256,28 @@ def get_working_path(v: Variables = None, default='.', env_key='DATA_WORKING_PAT
     return v.environ(env_key, default=stateful_ready_root if stateful_ready_root is not None else default)
 
 
-def init_framework(base_app_name: str, v: Variables = None, pyroscope=False, shutdown_hooks=True, stateful=True,
-                   default_stateful_root='./scratch', fixed_logger=None, log_format=None, log_level='INFO', fault_handler=True, sep='-',
-                   unnamed_params=(), **params):
+def init_framework(base_app_name: str, default_stateful_root='./scratch', default_run_id=None,
+                   fixed_logger=None, log_format=None, log_level='INFO',
+                   pyroscope=False, shutdown_hooks=True, stateful=True, fault_handler=True,
+                   sep='-', unnamed_params=(), v: Variables = None, **params):
     """
     Initialize the Scitrera Application Framework. This should be the first thing to be called in a "main" function
     for an application or container entrypoint.
 
     :param base_app_name: hard-coded base application name
-    :param v: an optional variables instance (a default instance will be provided and managed if None)
-    :param pyroscope: whether the default functionality is to initialize pyroscope (env variable will override this)
-    :param shutdown_hooks: whether the default functionality is to install shutdown hooks (env variable will override this)
-    :param stateful: whether the default functionality is to try to install stateful functionality (env variable will override this)
     :param default_stateful_root: the default stateful root if not provided by env variable
+    :param default_run_id: default run_id for stateful init (because next directory in path after stateful_root)
     :param fixed_logger: a predefined logger. Only use this in advanced usage when the framework is not at the center of the application.
     :param log_format: either 'json' to log following json message per line convention to facilitate log aggregation
                         or a %-style log format string.
     :param log_level: the default log level if not set by env variable.
+    :param pyroscope: whether the default functionality is to initialize pyroscope (env variable will override this)
+    :param shutdown_hooks: whether the default functionality is to install shutdown hooks (env variable will override this)
+    :param stateful: whether the default functionality is to try to install stateful functionality (env variable will override this)
     :param fault_handler: whether the default functionality is to try to install the python fault handler (env variable will override this)
     :param sep: the default separator used when constructing a longer, more complex app name based on given parameters
     :param unnamed_params: an iterable (tuple) containing parameters that should not be included in the app name
+    :param v: an optional variables instance (a default instance will be provided and managed if None)
     :param params: additional parameters to include as part of app name, pyroscope tagging, etc.
     :return: variables instance for the framework
     """
@@ -335,7 +338,7 @@ def init_framework(base_app_name: str, v: Variables = None, pyroscope=False, shu
 
     # init stateful root (which is also configuration dependent, so honestly, it probably should just always be on by default...)
     if v.environ('SAF_SETUP_STATEFUL', default=stateful, type_fn=ext_parse_bool):
-        _init_stateful_root(v, local_name=app_name, default_stateful_root=default_stateful_root)
+        _init_stateful_root(v, local_name=app_name, default_stateful_root=default_stateful_root, default_run_id=default_run_id)
 
     return v
 

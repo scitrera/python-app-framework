@@ -31,6 +31,8 @@ def init_framework_desktop(*args, **kwargs):
     import pathlib
     if 'default_stateful_root' not in kwargs:
         kwargs['default_stateful_root'] = pathlib.Path.home()
+    if 'default_run_id' not in kwargs:
+        kwargs['default_run_id'] = '.config'
     return init_framework(*args, **kwargs)
 
 
