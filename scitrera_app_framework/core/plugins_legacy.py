@@ -3,7 +3,7 @@
 # from queue import Queue
 # from collections import OrderedDict
 #
-# from ..api.plugins import Plugin
+# from ..api import Plugin
 #
 #
 # def order_plugins_by_dependencies(plugins: list[Plugin], existing_plugins: None | list[Plugin] = None, logger=None):

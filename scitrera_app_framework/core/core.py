@@ -11,7 +11,7 @@ from os import chdir, makedirs, path as osp
 from botwinick_utils.util import LOGGING_FORMAT, LOGGING_DATE_FORMAT
 
 from ..util import ext_parse_bool
-from ..api.variables import Variables
+from ..api import Variables
 from ..util.imports import get_python_type_by_name
 
 _sigterm_hooks = []
@@ -19,9 +19,9 @@ _sigterm_hooks = []
 _default_vars_inst = None
 
 # variables for standardized internal names
-_VAR_APP_STATEFUL_ROOT = '_app_state_root'
-_VAR_APP_STATEFUL_READY = '_app_state_ready'
-_VAR_MAIN_LOGGER = '_main_logger'
+_VAR_APP_STATEFUL_ROOT = '=|app_state_root|'
+_VAR_APP_STATEFUL_READY = '=|app_state_ready|'
+_VAR_MAIN_LOGGER = '=|main_logger|'
 
 
 def _get_default_vars_instance():
@@ -230,7 +230,7 @@ def load_strategy(v: Variables, parent_type, prefix='STRATEGY'):
 
     try:
         strategy = get_python_type_by_name(strategy_type_name, parent_type)
-    except (ValueError, ImportError) as e:
+    except (ImportError, AttributeError, TypeError, ValueError) as e:
         get_logger(v).error('unable to load strategy "%s": %s', strategy_type_name, e)
         strategy = None
 
@@ -330,7 +330,7 @@ def init_framework(base_app_name: str, default_stateful_root='./scratch', defaul
 
     # install signal shutdown hooks (must be on MainThread)
     if v.environ('SAF_INSTALL_SHUTDOWN_HOOKS', default=shutdown_hooks, type_fn=ext_parse_bool):
-        install_signal_hooks(v)  # TODO: make atexit vs signal handler configurable?
+        install_signal_hooks(v, via_at_exit=v.environ('SAF_SHUTDOWN_HOOK_VIA_ATEXIT', default=True, type_fn=ext_parse_bool))
 
     # do pyroscope init -- built in support for pyroscope profiling
     if v.environ('SAF_SETUP_PYROSCOPE', default=pyroscope, type_fn=ext_parse_bool):

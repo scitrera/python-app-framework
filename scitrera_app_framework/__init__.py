@@ -21,13 +21,24 @@ def init_framework(*args, **kwargs):
     register_package_plugins(base_plugins.__name__, v)
 
     # register shutdown function to shut down plugins upon initializing plugins...
-    from .core.plugins import shutdown_plugins
-    register_shutdown_function(shutdown_plugins, v)
+    from .core.plugins import shutdown_all_plugins
+    register_shutdown_function(shutdown_all_plugins, v)
 
     return v
 
 
 def init_framework_desktop(*args, **kwargs):
+    """
+    Alternate bootstrap function for `init_framework`. All arguments and keyword arguments are the
+    same as `init_framework`, so see that function for details. However, the default values for
+    the stateful root if not specified are changed such that stateful root will be "~/.config/$APP_NAME"
+    which makes more sense for a desktop application that the defaults which are more geared towards
+    containerized applications.
+
+    :param args: arguments from `init_framework`
+    :param kwargs: keyword arguments from `init_framework`
+    :return:
+    """
     import pathlib
     if 'default_stateful_root' not in kwargs:
         kwargs['default_stateful_root'] = pathlib.Path.home()
@@ -37,4 +48,3 @@ def init_framework_desktop(*args, **kwargs):
 
 
 init_framework.__doc__ = _init_framework.__doc__
-init_framework_desktop.__doc__ = _init_framework.__doc__

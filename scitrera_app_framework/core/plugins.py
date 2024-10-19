@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import Type
 
-from ..api.variables import Variables
-from ..api.plugins import Plugin
+from ..api import Variables, Plugin
 from .core import _get_default_vars_instance, get_logger
 
 
@@ -40,7 +39,7 @@ def _init_plugin(name, v: Variables = None, _requested_by=None, _now=False):
     if v is None:
         v = _get_default_vars_instance()
     pr = _plugin_registry(v)
-    plugin = pr.get(name)  # type: Plugin
+    plugin = pr.get(name, local=True)  # type: Plugin
     if plugin is None:
         raise ValueError(f'unable to find plugin: {name}')
 
@@ -86,7 +85,7 @@ def _init_plugin(name, v: Variables = None, _requested_by=None, _now=False):
     plugin.collected = True
     if plugin.eager or _now:  # if the plugin is eager... or we need it NOW, then make sure we initialize
         logger.debug('initializing plugin "%s" for extension point "%s"', name, ext_name)
-        value = plugin.initialize(v, logger)
+        value = plugin.initialize(v, plugin.get_logger(v))
         plugin.initialized = True
     else:
         value = None
@@ -98,7 +97,7 @@ def _init_plugin(name, v: Variables = None, _requested_by=None, _now=False):
     return result
 
 
-def shutdown_plugins(v: Variables = None):
+def shutdown_all_plugins(v: Variables = None):
     if v is None:
         v = _get_default_vars_instance()
 
@@ -109,7 +108,7 @@ def shutdown_plugins(v: Variables = None):
         if plugin.initialized:
             try:
                 _, value = er[plugin.extension_point_name(v)]
-                plugin.shutdown(v, logger, value)
+                plugin.shutdown(v, plugin.get_logger(v), value)
             except Exception as e:
                 logger.warning('Exception while shutting down plugin "%s" at extension point "%s": %s',
                                plugin.name(), plugin.extension_point_name(v), e)
@@ -118,8 +117,6 @@ def shutdown_plugins(v: Variables = None):
 
 
 def register_plugin(plugin_type: Type[Plugin], v: Variables = None, init=False):
-    # TODO: would facilitate more complex workflows if plugin or plugin_type could be specified...
-    #       (or drop Plugin instance option from get_extension)
     if v is None:
         v = _get_default_vars_instance()
     pr = _plugin_registry(v)
