@@ -81,26 +81,30 @@ class Variables2(object):
     __getattr__ = __getitem__
     get = __getitem__
 
-    def import_from_env_by_prefix(self, prefix: str, sep='_', drop_prefix=True):
+    def import_from_env_by_prefix(self, prefix: str, sep='_', drop_prefix=True, prefix_lower=False, key_lower=True):
         """
 
         :param prefix:
         :param sep:
         :param drop_prefix:
+        :param prefix_lower:
+        :param key_lower:
         :return:
         """
         se = self.environ
         ps = f'{prefix}{sep}'
         _ = {k: se(k) for k in environ.keys() if k.startswith(ps)}
-        return self.get_by_prefix(prefix, sep, drop_prefix)
+        return self.get_by_prefix(prefix, sep, drop_prefix, prefix_lower, key_lower)
 
-    def import_from_dict_by_prefix(self, prefix: str, source: dict, sep='_', drop_prefix=True):
+    def import_from_dict_by_prefix(self, prefix: str, source: dict, sep='_', drop_prefix=True, prefix_lower=False, key_lower=True):
         """
 
         :param prefix:
         :param source:
         :param sep:
         :param drop_prefix:
+        :param prefix_lower:
+        :param key_lower:
         :return:
         """
         if not source:
@@ -109,17 +113,30 @@ class Variables2(object):
         se = self.environ
         ps = f'{prefix}{sep}'
         _ = {k: se(k, default=v) for k, v in source.items() if k.startswith(ps)}
-        return self.get_by_prefix(prefix, sep, drop_prefix)
+        return self.get_by_prefix(prefix, sep, drop_prefix, prefix_lower, key_lower)
 
-    def get_by_prefix(self, prefix: str, sep='_', drop_prefix=True, prefix_lower=True):
+    def get_by_prefix(self, prefix: str, sep='_', drop_prefix=True, prefix_lower=False, key_lower=True):
+        """
+
+
+        :param prefix:
+        :param sep:
+        :param drop_prefix:
+        :param prefix_lower:
+        :param key_lower:
+        :return:
+        """
         get = self.get
         effective_prefix = prefix.lower() if prefix_lower else prefix
         ps = f'{effective_prefix}{sep}'
 
         def key_filter(k: str):
-            if not drop_prefix:
-                return k
-            return k.removeprefix(ps)
+            key = k
+            if drop_prefix:
+                key = key.removeprefix(ps)
+            if key_lower:
+                key = key.lower()
+            return key
 
         return {key_filter(k): get(k) for k in self._keys if k.startswith(ps)}
 
