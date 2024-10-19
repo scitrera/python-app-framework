@@ -33,15 +33,18 @@ class Variables2(object):
         self._sources = (
                 [_environment,  # we prioritize env variables
                  self._local,  # then we fall back to local settings to act as configurable defaults
-                 self._env_defaults  # falling back to general defaults
-                 ] + list(sources)  # then given other sources
+                 ] + list(sources) +  # then given other sources
+                [self._env_defaults, ]  # falling back to general defaults
         )
 
     def environ(self, key: str, environment_variable: str = None, default=None, type_fn: Callable = None):
-        if environment_variable:  # enforce that keys should be equal to lower-case variant of environment variables
-            key = environment_variable.lower()
-        elif key:  # enforce keys are lowercase
-            key = key.lower()
+        if environment_variable:  # if provided, environment variable is authoritative as key; we're transitioning away from old convention
+            key = environment_variable
+        # TODO: consider if we want to force case conventions or make lookups case insensitive? for now, leave case up to developer
+        # if environment_variable:  # enforce that keys should be equal to lower-case variant of environment variables
+        #     key = environment_variable.lower()
+        # elif key:  # enforce keys are lowercase
+        #     key = key.lower()
 
         if default is not None:
             self._env_defaults[key] = default
@@ -124,6 +127,12 @@ class Variables2(object):
         self._local[key] = value
         self._keys.add(key)
         return value
+
+    def update(self, dict_values: dict = None, **kwargs):
+        if dict_values:
+            kwargs.update(dict_values)
+        for k, v in kwargs.items():
+            self[k] = v
 
     def __setitem__(self, key, value):
         # key = key.lower()
