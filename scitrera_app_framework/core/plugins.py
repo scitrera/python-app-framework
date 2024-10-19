@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Type
+from logging import Logger
+from typing import Type, Iterable
 
 from ..api import Variables, Plugin
 from .core import _get_default_vars_instance, get_logger
@@ -164,3 +165,42 @@ def init_all_plugins(v: Variables = None):
     for name in pr.keys():
         _init_plugin(name, v=v)
     return
+
+
+def set_extension(extension_point: str, init_fn, shutdown_fn=None, dependencies=None, v: Variables = None):
+    """
+    This function is used to bypass the need to write Plugin types by minimally providing
+    an extension point and an initialization function.
+
+    :param extension_point: extension point name
+    :param init_fn: no-arg callable function that initialize the extension point, should return object to populate
+    the extension point (if it doesn't run a loop or some other continuous activity)
+    :param shutdown_fn: optional no-arg callable function to be called on shutdown
+    :param dependencies: optional list of required extension points
+    :param v: the variables/environment instance
+    :return:
+    """
+
+    # noinspection PyShadowingNames
+    class FacadePlugin(Plugin):
+        eager = False
+
+        def name(self) -> str:
+            return f'SetExtension|{extension_point}|'
+
+        def extension_point_name(self, v: Variables) -> str:
+            return extension_point
+
+        def get_dependencies(self, v: Variables) -> Iterable[str] | None:
+            return dependencies or ()
+
+        def initialize(self, v: Variables, logger: Logger) -> object | None:
+            return init_fn()
+
+        def shutdown(self, v: Variables, logger: Logger, value: object | None) -> None:
+            if shutdown_fn is not None:
+                return shutdown_fn()
+
+    if v is None:
+        v = _get_default_vars_instance()
+    return register_plugin(FacadePlugin, v)

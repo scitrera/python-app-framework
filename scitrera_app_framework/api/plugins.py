@@ -4,7 +4,7 @@ from abc import abstractmethod
 from logging import Logger
 from typing import Iterable
 
-from .variables import Variables
+from .variables2 import Variables2 as Variables
 
 
 class Plugin(object):
