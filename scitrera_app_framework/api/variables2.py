@@ -71,7 +71,7 @@ class Variables2(object):
                     break
 
         if match is not _no_match:
-            type_fn = self._type_fns.get(match, None)
+            type_fn = self._type_fns.get(key, None)
             if type_fn is not None:
                 return type_fn(match)
             return match
