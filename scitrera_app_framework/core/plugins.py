@@ -18,7 +18,7 @@ def _impl_registry(v: Variables = None) -> dict:
     return v.get_or_set('=|IR|', default_fn=dict)
 
 
-def _impl_options(ext_name: str, v: Variables = None) -> set[Plugin]:
+def _impl_options(ext_name: str, v: Variables = None) -> set[Plugin]:  # TODO: without hash/eq, sets for plugins sorta makes no sense
     # EIR = Extension Implementations Registry
     return v.get_or_set('=|EIR|', default_fn=Variables).get_or_set(ext_name, default_fn=set)
 
@@ -233,6 +233,9 @@ def get_extensions(extension_point: str | Type[Plugin], v: Variables = None) -> 
     result = {}
     for name, container in registry.items():
         instance, value = container
+        # # TODO: support check is_multi_extension late to allow runtime enable/disable of extensions
+        # if not instance.is_multi_extension(v):
+        #     continue
         if value is _NOT_INIT:
             instance, value = _init_plugin(name, v, _now=True)
         result[name] = value

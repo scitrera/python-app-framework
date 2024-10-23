@@ -180,7 +180,8 @@ class Variables2(object):
         return result
 
     def add_source(self, src: "Variables2" | dict):
-        self._sources.append(src)
+        # add new sources to the end of the list but before env_defaults fallback
+        self._sources.insert(len(self._sources) - 1, src)
         return
 
     def export_all_variables(self):
