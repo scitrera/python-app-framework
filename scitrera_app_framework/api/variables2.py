@@ -26,6 +26,13 @@ class Variables2(object):
     _sources = None
 
     def __init__(self, sources=()):
+        """
+        Instantiate a Variables instance to act as the centerpiece of coordinating application
+        components. Realistically, this should be called "Environment" or something, but way-back-when,
+        it was called Variables to act as a container for environment variables plus--and that stuck.
+
+        :param sources: optional iterable of sources to search for variables (i.e., for a multi-tier key-value store)
+        """
         self._local = {}  # type: dict[str, Any]
         self._env_defaults = {}  # type: dict[str, Any]
         self._type_fns = {}  # type: dict[str, Callable]
@@ -60,7 +67,7 @@ class Variables2(object):
         self._type_fns[key] = type_fn
         return
 
-    def __getitem__(self, key: str, local=False):
+    def __getitem__(self, key: str, default=None, local=False):
         match = _no_match
         if local:
             match = self._local.get(key, _no_match)
@@ -71,12 +78,14 @@ class Variables2(object):
                     break
 
         if match is not _no_match:
+            # if key not in self._keys:  # TODO: should any item that we retrieve should be considered part of us?
+            #     self._keys.add(key)
             type_fn = self._type_fns.get(key, None)
             if type_fn is not None:
                 return type_fn(match)
             return match
 
-        return None  # TODO: or should we raise exception like dict.__getitem__
+        return default  # TODO: or should we raise exception like dict.__getitem__
 
     __getattr__ = __getitem__
     get = __getitem__

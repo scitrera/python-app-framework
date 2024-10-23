@@ -1,6 +1,6 @@
 from .core import (
     register_shutdown_function, get_logger, get_working_path, get_variables,
-    get_extension, register_plugin, init_all_plugins,
+    get_extension, register_plugin, init_all_plugins, get_extensions,
     init_framework as _init_framework,
 )
 from .util import (

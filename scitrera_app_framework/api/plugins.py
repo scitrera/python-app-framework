@@ -12,6 +12,8 @@ class Plugin(object):
     initialized: bool = False  # whether this plugin has run its `initialize` method
     eager: bool = True  # whether this plugin defers running `initialize` until extension point requested or eagerly upon init call
 
+    # TODO: is_single_/is_multi_extension could be set as class fields rather than as methods?
+
     def name(self) -> str:
         """
         Each plugin should have a name that does not conflict with any other plugin.
@@ -57,8 +59,27 @@ class Plugin(object):
         """
         Each plugin can use variables to determine if it should be enabled. This provides a mechanism to differentiate between
         alternative plugins that otherwise would conflict on the same extension point--even if both are registered.
+
+        In classic "dependency injection" mode, this method determines if this is the active plugin to provide
+        implementation for a given extension point (interface).
+
+        TODO: this method should ideally change names to be more clear for its intended usage (e.g. is_active_implementation)
         """
         return True
+
+    # noinspection PyMethodMayBeStatic
+    def is_multi_extension(self, v: Variables) -> bool:
+        """
+        In the OSGi sense of a plugin registry/system, it could be possible that multiple plugins could
+        simultaneously add value at a certain extension point (e.g. for a "file reader" extension, there may be
+        multiple valid implementations that should be considered). TODO: better example
+
+        By default, this will be False since the initial implementation was to provide a dependency injection
+        like approach. This was added to support an OSGi extension-type approach as well.
+
+        :param v: optional variables/environment instance (will use default instance if not provided)
+        """
+        return False
 
     # noinspection PyMethodMayBeStatic,PyUnusedLocal
     def get_dependencies(self, v: Variables) -> Iterable[str] | None:
@@ -82,8 +103,6 @@ class Plugin(object):
         Each plugin can also have a shutdown method that declares how it should be safely shutdown
         """
         return
-
-    pass
 
 
 def enabled_option_pattern(plugin: Plugin, v: Variables, env_variable: str, default: str, self_attr: str = None) -> bool:

@@ -133,14 +133,14 @@ def _init_pyroscope_profiling(v: Variables = None, app_name=None, **tags):
 def _init_logging(logger_name, level='INFO', formatter=None, stream=sys.stderr):
     log_level = logging.getLevelName(level.upper())
     logging.root.setLevel(log_level)
-
+    # TODO: logging.root manipulation makes sense for container init scenario but not when multiple environments allowed
     logging.root.handlers.clear()
     if stream is not None:
         handler = logging.StreamHandler(stream=stream)
         if formatter is not None:
             handler.setFormatter(formatter)
         handler.setLevel(log_level)  # configure handler to use given level
-        logging.root.addHandler(handler)
+        logging.root.addHandler(handler)  # TODO: handler should be added to the root logger for the environment/Variables instance
 
     logger = logging.getLogger(logger_name)
     return logger
