@@ -109,7 +109,7 @@ def _init_plugin(name, v: Variables = None, _requested_by=None, _now=False):
     # commit to extension point registry
     if is_single:
         er[ext_name] = result = (plugin, value)
-    if is_multi:  # TODO: it might not make sense how this is done but works out for now because we only init multi with _now==True
+    if is_multi:
         _multi_ext_options(ext_name, v)[name] = list(result)  # list so that it's mutable later!
     pr.get_or_set('=|STARTUP_ORDER|', default_fn=list).append(plugin)
 
@@ -211,7 +211,7 @@ def get_extension(extension_point: str | Type[Plugin], v: Variables = None):
     return value
 
 
-def get_extensions(extension_point: str | Type[Plugin], v: Variables = None) -> Iterable[Any]:
+def get_extensions(extension_point: str | Type[Plugin], v: Variables = None) -> dict[str, Any]:
     """
     Get an iterable of values associated with a given multi extension point.
 
@@ -230,13 +230,12 @@ def get_extensions(extension_point: str | Type[Plugin], v: Variables = None) -> 
         raise ValueError(f'unable to determine extension point with given input: {extension_point}')
 
     registry = _multi_ext_options(extension_point, v)
-    result = []
+    result = {}
     for name, container in registry.items():
         instance, value = container
         if value is _NOT_INIT:
             instance, value = _init_plugin(name, v, _now=True)
-            container[1] = value
-        result.append(value)
+        result[name] = value
     return result
 
 
