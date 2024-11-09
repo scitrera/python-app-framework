@@ -349,9 +349,11 @@ def launch_app(name: str, *args, apps_manifest: dict, libs_manifest: dict,
 
     env = environ.copy()
     # TODO: better to be before/after existing PYTHONPATH if defined?
-    env['PYTHONPATH'] = (osp.pathsep.join(
-        [str(local_app_path), str(local_app_path / 'libs'), '.', ] +
-        library_import_paths) + env.get('PYTHONPATH', ''))
+    env['PYTHONPATH'] = osp.pathsep.join(
+        [str(local_app_path), str(local_app_path / 'libs')] +
+        library_import_paths +
+        [env.get('PYTHONPATH', '')]
+    )
 
     # spawn separate process for desired code using current directory, passing arguments, and app/lib config
     logger.info('Launching %s v%s', name, version)
