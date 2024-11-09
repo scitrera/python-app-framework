@@ -25,7 +25,7 @@ def update_manifest(name, latest_ver=None, libs=False, update_current_ver=False,
 
     # if we don't have a current version and shouldn't update it, then we
     # adopt the previous latest version as the current version
-    elif VERSION_CURRENT not in existing_def and not update_current_ver:
+    elif VERSION_CURRENT not in existing_def and not update_current_ver and VERSION_LATEST in existing_def:
         new_def[VERSION_CURRENT] = existing_def[VERSION_LATEST]
 
     # override to enable setting a specific current version if it's an "arbitrary" rollback rather than switching to latest/not
