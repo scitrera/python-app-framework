@@ -318,21 +318,26 @@ def launch_app(name: str, *args, apps_manifest: dict, libs_manifest: dict,
 
     # get libraries requirements
     libraries = app_manifest.get('lib_versions', None)
-    if not libraries:  # if lib_versions not specified, we assume current/latest for all!
+    if not libraries:  # if lib_versions not specified, we assume current/latest for all available libs!
         logger.debug('Libraries not specified for "%s", assuming current/latest...', name)
-        libraries = {k: v.get('current', v.get('latest', None)) for k, v in libs_manifest.items()}
-        # TODO: if someone get new libs manifest then disconnected, they might have libs trouble? worth effort?
+        libraries = {k: v.get(VERSION_CURRENT, v.get(VERSION_LATEST, None)) for k, v in libs_manifest.items()}
+        # TODO: if someone get new libs manifest then disconnected, they might have libs trouble? not worth effort?
 
     logger.debug('Ensuring that libraries for "%s" are available', name)
     library_import_paths = []
     for lib_name, lib_ver in libraries.items():
+        # if library entry but empty version string, then we use current/latest
+        # this mechanism allows selecting particular libraries but leaving versions open-ended
+        if not lib_ver:
+            lmd = libs_manifest[lib_name]  # lib_manifest_data
+            lib_ver = lmd.get(VERSION_CURRENT, lmd.get(VERSION_LATEST, None))
         check_update_lib(env_name, lib_name, lib_ver, local_data=local_data, update=libs_update)
         library_import_paths.append(str(local_lib_root / lib_name / lib_ver))
 
     # handle app pip/conda requirements if this was a remote definition (meaning first run)
     if remote:
-        apply_conda_requirements(env_name, *app_manifest.get('conda_requirements', []))
-        apply_pip_requirements(env_name, *app_manifest.get('pip_requirements', []))
+        apply_conda_requirements(env_name, *app_manifest.get(REQ_CONDA, []))
+        apply_pip_requirements(env_name, *app_manifest.get(REQ_PIP, []))
 
     # if remote or main.py is missing, we also need to copy the files over!
     if remote or (entrypoint and not (local_app_path / entrypoint).exists()):
