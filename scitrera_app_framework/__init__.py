@@ -46,8 +46,8 @@ def init_framework_desktop(*args, **kwargs):
         kwargs['default_stateful_root'] = pathlib.Path.home()
     if 'default_run_id' not in kwargs:
         kwargs['default_run_id'] = '.config'
-    if 'default_chdir' not in kwargs:
-        kwargs['default_chdir'] = False
+    if 'stateful_chdir' not in kwargs:
+        kwargs['stateful_chdir'] = False
     return init_framework(*args, **kwargs)
 
 
