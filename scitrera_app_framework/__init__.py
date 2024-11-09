@@ -32,8 +32,10 @@ def init_framework_desktop(*args, **kwargs):
     Alternate bootstrap function for `init_framework`. All arguments and keyword arguments are the
     same as `init_framework`, so see that function for details. However, the default values for
     the stateful root if not specified are changed such that stateful root will be "~/.config/$APP_NAME"
-    which makes more sense for a desktop application that the defaults which are more geared towards
+    which makes more sense for a desktop application than the defaults which are more geared towards
     containerized applications.
+
+    Also changes the default stateful_chdir functionality to False if not configured in kwargs or via environment variable.
 
     :param args: arguments from `init_framework`
     :param kwargs: keyword arguments from `init_framework`
@@ -44,6 +46,8 @@ def init_framework_desktop(*args, **kwargs):
         kwargs['default_stateful_root'] = pathlib.Path.home()
     if 'default_run_id' not in kwargs:
         kwargs['default_run_id'] = '.config'
+    if 'default_chdir' not in kwargs:
+        kwargs['default_chdir'] = False
     return init_framework(*args, **kwargs)
 
 

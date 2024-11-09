@@ -184,7 +184,8 @@ def _log_fmt_json(**static_fields):
         return None
 
 
-def _init_stateful_root(v: Variables, local_name=None, default_stateful_root='./scratch', default_run_id=None, default_run_serial=None):
+def _init_stateful_root(v: Variables, local_name=None, default_stateful_root='./scratch',
+                        default_run_id=None, default_run_serial=None, default_chdir=True):
     logger = get_logger(v)
 
     if local_name is None:
@@ -205,7 +206,8 @@ def _init_stateful_root(v: Variables, local_name=None, default_stateful_root='./
     # makedirs as needed and set working directory to stateful root
     logger.info('app stateful root=%s', app_state_root)
     makedirs(app_state_root, exist_ok=True)
-    chdir(app_state_root)
+    if v.environ('SAF_STATEFUL_CHDIR', default=default_chdir, type_fn=ext_parse_bool):
+        chdir(app_state_root)
     v.set(_VAR_APP_STATEFUL_READY, True)  # set stateful ready flag to True
     return
 
@@ -258,8 +260,8 @@ def get_working_path(v: Variables = None, default='.', env_key='DATA_WORKING_PAT
 
 def init_framework(base_app_name: str, default_stateful_root='./scratch', default_run_id=None,
                    fixed_logger=None, log_format=None, log_level='INFO',
-                   pyroscope=False, shutdown_hooks=True, stateful=True, fault_handler=True,
-                   sep='-', unnamed_params=(), v: Variables = None, **params):
+                   pyroscope=False, shutdown_hooks=True, stateful=True, stateful_chdir=True,
+                   fault_handler=True, sep='-', unnamed_params=(), v: Variables = None, **params):
     """
     Initialize the Scitrera Application Framework. This should be the first thing to be called in a "main" function
     for an application or container entrypoint.
@@ -274,6 +276,7 @@ def init_framework(base_app_name: str, default_stateful_root='./scratch', defaul
     :param pyroscope: whether the default functionality is to initialize pyroscope (env variable will override this)
     :param shutdown_hooks: whether the default functionality is to install shutdown hooks (env variable will override this)
     :param stateful: whether the default functionality is to try to install stateful functionality (env variable will override this)
+    :param stateful_chdir: whether the default stateful functionality is to change the current working dir (env variable will override this)
     :param fault_handler: whether the default functionality is to try to install the python fault handler (env variable will override this)
     :param sep: the default separator used when constructing a longer, more complex app name based on given parameters
     :param unnamed_params: an iterable (tuple) containing parameters that should not be included in the app name
@@ -338,7 +341,8 @@ def init_framework(base_app_name: str, default_stateful_root='./scratch', defaul
 
     # init stateful root (which is also configuration dependent, so honestly, it probably should just always be on by default...)
     if v.environ('SAF_SETUP_STATEFUL', default=stateful, type_fn=ext_parse_bool):
-        _init_stateful_root(v, local_name=app_name, default_stateful_root=default_stateful_root, default_run_id=default_run_id)
+        _init_stateful_root(v, local_name=app_name, default_stateful_root=default_stateful_root,
+                            default_run_id=default_run_id, default_chdir=stateful_chdir)
 
     return v
 
