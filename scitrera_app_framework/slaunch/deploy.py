@@ -6,7 +6,7 @@ from vpd.next.util import read_yaml, open_ensure_paths
 from .constants import *
 
 
-def update_manifest(name, latest_ver=None, libs=False, update_current_ver=False):
+def update_manifest(name, latest_ver=None, libs=False, update_current_ver=False, force_current_ver=None):
     from .main import REPOSITORY_PATH
     manifest_home = REPOSITORY_PATH / LIBS if libs else REPOSITORY_PATH
     manifest_path = manifest_home / MANIFEST_YAML
@@ -28,25 +28,29 @@ def update_manifest(name, latest_ver=None, libs=False, update_current_ver=False)
     elif VERSION_CURRENT not in existing_def and not update_current_ver:
         new_def[VERSION_CURRENT] = existing_def[VERSION_LATEST]
 
+    # override to enable setting a specific current version if it's an "arbitrary" rollback rather than switching to latest/not
+    if force_current_ver is not None:
+        new_def[VERSION_CURRENT] = force_current_ver
+
     manifest[name] = new_def
 
-    with open_ensure_paths(REPOSITORY_PATH / MANIFEST_YAML, 'w') as f:
+    with open_ensure_paths(manifest_path, 'w') as f:
         yaml.safe_dump(manifest, f)
 
     return
 
 
-def deploy_app(src_path, name, version, update_current=False):
+def deploy_app(src_path, name, version, update_current=False, **kwargs):
     from .main import REPOSITORY_PATH
     tgt_path = REPOSITORY_PATH / name / version
-    copytree(src_path, tgt_path)
+    copytree(src_path, tgt_path, **kwargs)
     update_manifest(name, version, update_current_ver=update_current)
     return
 
 
-def deploy_lib(src_path, name, version, update_current=False):
+def deploy_lib(src_path, name, version, update_current=False, **kwargs):
     from .main import REPOSITORY_PATH
     tgt_path = REPOSITORY_PATH / LIBS / name / version
-    copytree(src_path, tgt_path)
+    copytree(src_path, tgt_path, **kwargs)
     update_manifest(name, version, libs=True, update_current_ver=update_current)
     return
