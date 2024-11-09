@@ -1,4 +1,5 @@
 setuptools
 botwinick-utils
 vpd
+PyYAML  # included via vpd, but added to be explicit
 python-json-logger
