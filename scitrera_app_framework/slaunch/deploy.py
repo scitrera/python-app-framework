@@ -37,20 +37,20 @@ def update_manifest(name, latest_ver=None, libs=False, update_current_ver=False,
     with open_ensure_paths(manifest_path, 'w') as f:
         yaml.safe_dump(manifest, f)
 
-    return
+    return new_def
 
 
 def deploy_app(src_path, name, version, update_current=False, **kwargs):
     from .main import REPOSITORY_PATH
     tgt_path = REPOSITORY_PATH / name / version
     copytree(src_path, tgt_path, **kwargs)
-    update_manifest(name, version, update_current_ver=update_current)
-    return
+    m = update_manifest(name, version, update_current_ver=update_current)
+    return m
 
 
 def deploy_lib(src_path, name, version, update_current=False, **kwargs):
     from .main import REPOSITORY_PATH
     tgt_path = REPOSITORY_PATH / LIBS / name / version
     copytree(src_path, tgt_path, **kwargs)
-    update_manifest(name, version, libs=True, update_current_ver=update_current)
-    return
+    m = update_manifest(name, version, libs=True, update_current_ver=update_current)
+    return m
