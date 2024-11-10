@@ -318,7 +318,9 @@ def launch_app(name: str, *args, apps_manifest: dict, libs_manifest: dict,
 
     # get libraries requirements
     libraries = app_manifest.get('lib_versions', None)
-    if not libraries:  # if lib_versions not specified, we assume current/latest for all available libs!
+    # if lib_versions not specified in manifest, we assume current/latest for all available libs!
+    # (but if it's defined as empty mapping, then we effectively skip libs)
+    if libraries is None:
         logger.debug('Libraries not specified for "%s", assuming current/latest...', name)
         libraries = {k: v.get(VERSION_CURRENT, v.get(VERSION_LATEST, None)) for k, v in libs_manifest.items()}
         # TODO: if someone get new libs manifest then disconnected, they might have libs trouble? not worth effort?
