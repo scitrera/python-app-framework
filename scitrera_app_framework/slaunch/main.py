@@ -27,8 +27,8 @@ elif CURRENT_OS == 'linux':
     mc3_installer_save_path = './miniconda.sh'
     mc3_install_args = ['/bin/bash', mc3_installer_save_path] + ['-b', '-u', '-p', '{path}']
     mc3_conda_exec = osp.join('condabin', 'conda')
-    python_exe = 'python'
-    pythonw_exe = 'pythonw'
+    python_exe = 'bin/python'
+    pythonw_exe = 'bin/pythonw'
 else:
     raise ImportError(f'cannot run on OS: {CURRENT_OS}')
 
