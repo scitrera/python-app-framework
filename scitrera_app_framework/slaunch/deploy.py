@@ -170,7 +170,7 @@ def deploy_libraries(build_root: pathlib.Path, update_current: bool = False, sub
     return deployed
 
 
-def deploy_app(name: str, app_path: pathlib.Path, update_current: bool = False, ignore_fn: Optional[Callable] = None):
+def deploy_application(name: str, app_path: pathlib.Path, update_current: bool = False, ignore_fn: Optional[Callable] = None):
     """
     Deploy an already built/compiled application to central repository
 
@@ -217,7 +217,7 @@ def deploy_applications(build_root: pathlib.Path, update_current: bool = False, 
             continue
         try:
             print(f'Deploying application: {pkg}')
-            deploy_app(pkg, app_path=build_root / pkg, update_current=update_current, ignore_fn=ignore_fn)
+            deploy_application(pkg, app_path=build_root / pkg, update_current=update_current, ignore_fn=ignore_fn)
         except (ValueError, ImportError, AttributeError, subprocess.CalledProcessError) as e:
             print(f'\t{e}')
 
