@@ -97,9 +97,10 @@ def run_python(env_name, *args, cwd=None, env=None, _pythonw=False, _shell=True,
     working_path = pathlib.Path(get_working_path())
     py_exe = pythonw_exe if _pythonw else python_exe
     full_exe_path = working_path / ENV / env_name / py_exe
-    if not full_exe_path.exists():
-        build_env(*_env_def_args(env_name))
-        raise ValueError(f'environment {env_name} not available')
+    # TODO: review if we want a check here for environment sanity or just let things explode if there is a problem
+    # if not full_exe_path.exists():
+    #     build_env(*_env_def_args(env_name))
+    #     raise ValueError(f'environment {env_name} not available')
 
     if cwd is None:
         cwd = working_path / ENV / env_name
