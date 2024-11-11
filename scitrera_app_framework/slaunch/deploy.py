@@ -191,7 +191,7 @@ def deploy_application(name: str, app_path: pathlib.Path, update_current: bool =
                     ('-build-report-' in n and n.endswith('.xml'))
                     or n.endswith('.build')
                     or n == '__pycache__'
-                    or version_file in n
+                    # or version_file in n  # originally we were excluding the version file but honestly... why?
             )]
             return screened
 
