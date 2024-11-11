@@ -67,8 +67,7 @@ def ensure_mc3():
 
     # download mc3 installer
     logger.info('Downloading MC3')
-    subprocess.run(shell_dl.format(in_url=mc3_download_url, out_file=mc3_installer_save_path),
-                   cwd=working_path, check=True)
+    subprocess.run(shell_dl.format(in_url=mc3_download_url, out_file=mc3_installer_save_path), cwd=working_path, check=True, shell=True)
 
     # install mc3
     logger.info('Installing MC3')
@@ -203,8 +202,7 @@ def get_manifest(libs=False, name=None, version=None, src=None):
         return manifest
     except (IOError, OSError) as e:
         if src is None:
-            get_logger().debug('Unable to reach central repo, switching to local data, libs=%s, name=%s, version=%s',
-                               libs, name, version)
+            get_logger().debug('Unable to reach central repo, switching to local data, libs=%s, name=%s, version=%s', libs, name, version)
             return get_manifest(src=working_path / DATA)
 
     return None
