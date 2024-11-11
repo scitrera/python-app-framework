@@ -33,7 +33,7 @@ else:
     raise ImportError(f'cannot run on OS: {CURRENT_OS}')
 
 APP_NAME = 'slaunch'
-REPOSITORY_PATH = pathlib.Path('/slaunch_repo')
+REPOSITORY_PATH = environ.get('SLAUNCH_REPOSITORY_PATH', pathlib.Path('/slaunch_repo'))
 
 
 def _env_def_args(name: str, src=None):
