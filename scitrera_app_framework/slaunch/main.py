@@ -14,7 +14,7 @@ from .constants import *
 
 CURRENT_OS = _current_os()
 if CURRENT_OS == 'windows':
-    shell_dl = 'curl {in_url} -o {out_file}'
+    shell_dl = ['curl', '{in_url}', '-o', '{out_file}']
     mc3_download_url = 'https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe'
     mc3_installer_save_path = '.\\miniconda.exe'
     mc3_install_args = [mc3_installer_save_path] + ['/S', '/NoScripts', '/NoShortcuts', '/D={path}']
@@ -22,7 +22,7 @@ if CURRENT_OS == 'windows':
     python_exe = 'python.exe'
     pythonw_exe = 'pythonw.exe'
 elif CURRENT_OS == 'linux':
-    shell_dl = 'wget {in_url} -O {out_file}'
+    shell_dl = ['/bin/wget', '{in_url}', '-O', '{out_file}']
     mc3_download_url = 'https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh'
     mc3_installer_save_path = './miniconda.sh'
     mc3_install_args = ['/bin/bash', mc3_installer_save_path] + ['-b', '-u', '-p', '{path}']
@@ -67,13 +67,13 @@ def ensure_mc3():
 
     # download mc3 installer
     logger.info('Downloading MC3')
-    subprocess.run(shell_dl.format(in_url=mc3_download_url, out_file=mc3_installer_save_path), cwd=working_path, check=True, shell=True)
+    subprocess.run([s.format(in_url=mc3_download_url, out_file=mc3_installer_save_path) for s in shell_dl], cwd=working_path, check=True)
 
     # install mc3
     logger.info('Installing MC3')
     specific_mc3_args = [s.format(path=working_path / MC3) for s in mc3_install_args]
     logger.debug(f'args: %s', specific_mc3_args)
-    subprocess.run(specific_mc3_args, cwd=working_path, shell=True, check=True)
+    subprocess.run(specific_mc3_args, cwd=working_path, check=True)
 
     # remove mc3 installer
     remove(working_path / mc3_installer_save_path)
