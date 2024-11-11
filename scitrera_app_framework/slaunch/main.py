@@ -374,8 +374,15 @@ def main(*args):
     # update apps and libs manifests up front from central registry if possible
     logger.debug('Getting app manifest')
     apps_manifest = get_manifest()
+    if apps_manifest is None:
+        logger.error('unable to get applications manifest')
+        sys.exit(2)
+
     logger.debug('Getting libs manifest')
     libs_manifest = get_manifest(libs=True)
+    if libs_manifest is None:
+        logger.error('unable to get libraries manifest')
+        sys.exit(3)
 
     # process arguments in a customized way trying to avoid args that could come from other applications
     version = None
