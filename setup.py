@@ -5,7 +5,7 @@ with open("README.md", 'r') as f:
 
 setuptools.setup(
     name="scitrera-app-framework",
-    version="0.0.35",
+    version="0.0.36",
     author="Scitrera LLC",
     author_email="sales@scitrera.com",
     description="Common Application Framework Code and Utilities",

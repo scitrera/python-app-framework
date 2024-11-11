@@ -93,7 +93,7 @@ def run_conda(env_name, arg0, *args, append_prefix=True, env_root=None, **kwargs
     )
 
 
-def run_python(env_name, *args, cwd=None, env=None, _pythonw=False, _shell=True, _separate=False):
+def run_python(env_name, *args, cwd=None, env=None, _pythonw=False, _shell=False, _separate=False):
     working_path = pathlib.Path(get_working_path())
     py_exe = pythonw_exe if _pythonw else python_exe
     full_exe_path = working_path / ENV / env_name / py_exe
