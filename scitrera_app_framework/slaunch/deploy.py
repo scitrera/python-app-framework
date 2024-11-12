@@ -195,7 +195,7 @@ def deploy_application(name: str, app_path: pathlib.Path, update_current: bool =
             )]
             return screened
 
-    print(f'Deployment lib XFR for {name} {version}')
+    print(f'Deployment app XFR for {name} {version}')
     return _deploy_app(app_path, l_name, version, update_current=update_current, ignore=ignore_fn, dirs_exist_ok=True)
 
 

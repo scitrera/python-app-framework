@@ -349,11 +349,10 @@ def launch_app(name: str, *args, apps_manifest: dict, libs_manifest: dict,
     # TODO: maybe checksum verification?
 
     env = environ.copy()
-    # TODO: better to be before/after existing PYTHONPATH if defined?
     env['PYTHONPATH'] = osp.pathsep.join(
+        [env.get('PYTHONPATH', '')] +  # prioritize externally provided PYTHONPATH (e.g. from IDE) above built-in libs
         [str(local_app_path), str(local_app_path / 'libs')] +
-        library_import_paths +
-        [env.get('PYTHONPATH', '')]
+        library_import_paths
     )
 
     # spawn separate process for desired code using current directory, passing arguments, and app/lib config
@@ -396,11 +395,14 @@ def main(*args):
             version = args[i + 1].strip()
             i += 2
             continue
-        elif arg == '--slaunch-app-update':
+        elif arg == '--slaunch-app-update':  # update local app
             update = True
-        elif arg == '--slaunch-libs-update':
+        elif arg == '--slaunch-libs-update':  # update local libs
             libs_update = True
-        elif arg == '--slaunch-full-reset':
+        elif arg == '--slaunch-update':  # update local app + libs
+            update = True
+            libs_update = True
+        elif arg == '--slaunch-full-reset':  # update local app + libs + environment
             reset = True
         else:
             processed_args.append(arg)
