@@ -14,11 +14,13 @@ from .base_plugins import (
 
 
 def init_framework(*args, **kwargs):
+    register_base_plugins = kwargs.pop('base_plugins', True)
     v = _init_framework(*args, **kwargs)
 
-    # import all base_plugins
-    from . import base_plugins
-    register_package_plugins(base_plugins.__name__, v)
+    if v.environ('SAF_BASE_PLUGINS', default=register_base_plugins, type_fn=ext_parse_bool):
+        # import all base_plugins
+        from . import base_plugins
+        register_package_plugins(base_plugins.__name__, v)
 
     # register shutdown function to shut down plugins upon initializing plugins...
     from .core.plugins import shutdown_all_plugins
