@@ -221,7 +221,7 @@ def check_update_lib(env_name, lib_name, lib_ver, local_data=None, update=False)
 
     if update:
         logger.warning('Clearing local data for lib %s v%s', lib_name, lib_ver)
-        rmtree(local_lib_path)
+        rmtree(local_lib_path, ignore_errors=True)
 
     remote = False
     logger.debug('loading local lib manifest for %s v%s', lib_name, lib_ver)
