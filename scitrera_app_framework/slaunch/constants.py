@@ -7,6 +7,7 @@ LIBS = '_libs'
 ENV_DEFS = '_env'
 DATA = 'data'
 VERSION_CURRENT = 'current'
+VERSION_STABLE = VERSION_CURRENT
 VERSION_LATEST = 'latest'
 REQ_PIP = 'pip_requirements'
 REQ_CONDA = 'conda_requirements'
