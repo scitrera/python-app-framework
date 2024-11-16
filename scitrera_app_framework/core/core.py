@@ -10,7 +10,7 @@ from os import chdir, makedirs, path as osp
 
 from botwinick_utils.util import LOGGING_FORMAT, LOGGING_DATE_FORMAT
 
-from ..util import ext_parse_bool
+from ..util import ext_parse_bool, now_ms
 from ..api import Variables
 from ..util.imports import get_python_type_by_name
 
@@ -18,7 +18,7 @@ _sigterm_hooks = []
 
 _default_vars_inst = None
 
-# variables for standardized internal names
+# variables for standardized internal names (with symbols that make them unlikely to collide with any user variable names)
 _VAR_APP_STATEFUL_ROOT = '=|app_state_root|'
 _VAR_APP_STATEFUL_READY = '=|app_state_ready|'
 _VAR_MAIN_LOGGER = '=|main_logger|'
@@ -78,14 +78,13 @@ def get_logger(v: Variables = None, logger=None, name=None):
     if v is None:
         v = _get_default_vars_instance()
 
-    if logger is None and name is None:
+    if logger is None:
         logger = v.get(_VAR_MAIN_LOGGER)
         if logger is None:
-            # TODO: save main logger?
-            logger = logging.getLogger('main')
-    elif logger is None and name is not None:
-        return logging.getLogger(name)
-    elif name is not None:
+            logger = logging.getLogger('SAF')  # no logger, but don't leave developer high and dry...
+            logger.warning('logger called before framework initialization! verify plugins / import order')
+
+    if name is not None:
         return logger.getChild(name)
     return logger
 
@@ -245,7 +244,7 @@ def get_working_path(v: Variables = None, default='.', env_key='DATA_WORKING_PAT
     resolution order:
     1) ENVIRONMENT VARIABLE for env_key
     2) STATEFUL ROOT derived location (if available)
-    3) given default to this function
+    3) given default to this function (typically .)
 
     :param v: framework env/variables object
     :param default: fallback working path (default is '.')
@@ -258,25 +257,32 @@ def get_working_path(v: Variables = None, default='.', env_key='DATA_WORKING_PAT
     return v.environ(env_key, default=stateful_ready_root if stateful_ready_root is not None else default)
 
 
-def init_framework(base_app_name: str, default_stateful_root='./scratch', default_run_id=None,
+def init_framework(base_app_name: str,
                    fixed_logger=None, log_format=None, log_level='INFO',
-                   pyroscope=False, shutdown_hooks=True, stateful=True, stateful_chdir=True,
-                   fault_handler=True, sep='-', unnamed_params=(), v: Variables = None, **params):
+                   pyroscope=False,
+                   shutdown_hooks=True, shutdown_hooks_via_atexit=True,
+                   stateful=True, stateful_chdir=True, default_stateful_root='./scratch', default_run_id=None, default_serial_strategy=None,
+                   fault_handler=True,
+                   sep='-', unnamed_params=(),
+                   v: Variables = None,
+                   **params):
     """
     Initialize the Scitrera Application Framework. This should be the first thing to be called in a "main" function
     for an application or container entrypoint.
 
     :param base_app_name: hard-coded base application name
-    :param default_stateful_root: the default stateful root if not provided by env variable
-    :param default_run_id: default run_id for stateful init (because next directory in path after stateful_root)
     :param fixed_logger: a predefined logger. Only use this in advanced usage when the framework is not at the center of the application.
     :param log_format: either 'json' to log following json message per line convention to facilitate log aggregation
                         or a %-style log format string.
     :param log_level: the default log level if not set by env variable.
     :param pyroscope: whether the default functionality is to initialize pyroscope (env variable will override this)
     :param shutdown_hooks: whether the default functionality is to install shutdown hooks (env variable will override this)
+    :param shutdown_hooks_via_atexit: whether the default functionality for shutdown hooks is to use stdlib "atexit"
     :param stateful: whether the default functionality is to try to install stateful functionality (env variable will override this)
     :param stateful_chdir: whether the default stateful functionality is to change the current working dir (env variable will override this)
+    :param default_stateful_root: the default stateful root if not provided by env variable
+    :param default_run_id: default run_id for stateful init (becomes next directory in path after stateful_root)
+    :param default_serial_strategy: default strategy for generating run serial (default is None) (alternative: 'ms': use unix time in ms)
     :param fault_handler: whether the default functionality is to try to install the python fault handler (env variable will override this)
     :param sep: the default separator used when constructing a longer, more complex app name based on given parameters
     :param unnamed_params: an iterable (tuple) containing parameters that should not be included in the app name
@@ -333,7 +339,8 @@ def init_framework(base_app_name: str, default_stateful_root='./scratch', defaul
 
     # install signal shutdown hooks (must be on MainThread)
     if v.environ('SAF_INSTALL_SHUTDOWN_HOOKS', default=shutdown_hooks, type_fn=ext_parse_bool):
-        install_signal_hooks(v, via_at_exit=v.environ('SAF_SHUTDOWN_HOOK_VIA_ATEXIT', default=True, type_fn=ext_parse_bool))
+        install_signal_hooks(v, via_at_exit=v.environ('SAF_SHUTDOWN_HOOK_VIA_ATEXIT',
+                                                      default=shutdown_hooks_via_atexit, type_fn=ext_parse_bool))
 
     # do pyroscope init -- built in support for pyroscope profiling
     if v.environ('SAF_SETUP_PYROSCOPE', default=pyroscope, type_fn=ext_parse_bool):
@@ -341,8 +348,13 @@ def init_framework(base_app_name: str, default_stateful_root='./scratch', defaul
 
     # init stateful root (which is also configuration dependent, so honestly, it probably should just always be on by default...)
     if v.environ('SAF_SETUP_STATEFUL', default=stateful, type_fn=ext_parse_bool):
+        serial_strategy = v.environ('SAF_STATEFUL_SERIAL_STRATEGY', default=default_serial_strategy)
+        if serial_strategy == 'ms':
+            default_serial = now_ms()
+        else:
+            default_serial = None
         _init_stateful_root(v, local_name=app_name, default_stateful_root=default_stateful_root,
-                            default_run_id=default_run_id, default_chdir=stateful_chdir)
+                            default_run_id=default_run_id, default_run_serial=default_serial, default_chdir=stateful_chdir)
 
     return v
 
@@ -362,7 +374,7 @@ _lmv = log_module_versions
 
 
 # noinspection PyShadowingNames
-def log_framework_variables(v: Variables, log_module_versions=True, **kwargs):
+def log_framework_variables(v: Variables, log_module_versions=False, **kwargs):
     logger = get_logger(v)
     # TODO: more complex/thorough code to identify material that should be redacted
     logger.info('framework variables%s = %s', kwargs,
