@@ -37,19 +37,38 @@ def init_framework_desktop(*args, **kwargs):
     which makes more sense for a desktop application than the defaults which are more geared towards
     containerized applications.
 
-    Also changes the default stateful_chdir functionality to False if not configured in kwargs or via environment variable.
+    Also sets the following defaults (that take effect unless overridden by environment or kwarg):
+    * set the default stateful_chdir functionality to False
+    * set the default shutdown hooks approach to use the stdlib "atexit" module
+    * set base plugins to register
 
     :param args: arguments from `init_framework`
     :param kwargs: keyword arguments from `init_framework`
     :return:
     """
     import pathlib
+
+    # configure stateful to target ~/.config/{APP_NAME}
     if 'default_stateful_root' not in kwargs:
         kwargs['default_stateful_root'] = pathlib.Path.home()
     if 'default_run_id' not in kwargs:
         kwargs['default_run_id'] = '.config'
+    if 'default_serial_strategy' not in kwargs:
+        kwargs['default_serial_strategy'] = None
+
+    # preserve current directory (app functionality may depend on working directory)
     if 'stateful_chdir' not in kwargs:
         kwargs['stateful_chdir'] = False
+
+    # prefer atexit to signal handlers for desktop apps
+    if 'shutdown_hooks_via_atexit' not in kwargs:
+        kwargs['shutdown_hooks_via_atexit'] = True
+
+    # desktop apps are more likely to make use of the base plugins
+    if 'base_plugins' not in kwargs:
+        kwargs['base_plugins'] = True
+
+    # continue usual framework init
     return init_framework(*args, **kwargs)
 
 
