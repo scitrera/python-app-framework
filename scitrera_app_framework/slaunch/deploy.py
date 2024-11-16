@@ -1,12 +1,13 @@
 import pathlib
 import subprocess
 
-from shutil import copytree
+from shutil import copytree, copy2
 from typing import Optional, Iterable, Callable
 
 import yaml
 from vpd.next.util import read_yaml, open_ensure_paths
 from botwinick_utils.platforms import operating_system
+from botwinick_utils.paths import native_copy
 from botwinick_utils.platforms.python import read_pkg_version
 
 from .constants import *
@@ -96,17 +97,17 @@ def update_manifest(name: str, latest_ver: Optional[str] = None, libs: bool = Fa
 
 
 def _deploy_app(src_path: pathlib.Path, name: str, version: str, update_current: bool = False, **kwargs):
-    from .main import REPOSITORY_PATH
+    from .main import REPOSITORY_PATH, NATIVE_COPY
     tgt_path = REPOSITORY_PATH / name / version
-    copytree(src_path, tgt_path, **kwargs)
+    copytree(src_path, tgt_path, copy_function=native_copy if NATIVE_COPY else copy2, **kwargs)
     m = update_manifest(name, version, update_current_ver=update_current)
     return m
 
 
 def _deploy_lib(src_path: pathlib.Path, name: str, version: str, update_current: bool = False, **kwargs):
-    from .main import REPOSITORY_PATH
+    from .main import REPOSITORY_PATH, NATIVE_COPY
     tgt_path = REPOSITORY_PATH / LIBS / name / version
-    copytree(src_path, tgt_path, **kwargs)
+    copytree(src_path, tgt_path, copy_function=native_copy if NATIVE_COPY else copy2, **kwargs)
     m = update_manifest(name, version, libs=True, update_current_ver=update_current)
     return m
 
@@ -191,7 +192,7 @@ def deploy_application(name: str, app_path: pathlib.Path, update_current: bool =
                     ('-build-report-' in n and n.endswith('.xml'))
                     or n.endswith('.build')
                     or n == '__pycache__'
-                    # or version_file in n  # originally we were excluding the version file but honestly... why?
+                # or version_file in n  # originally we were excluding the version file but honestly... why?
             )]
             return screened
 
@@ -233,7 +234,7 @@ def deploy_environments(environments_root: pathlib.Path):
     :param environments_root: base path for environments, children of this path should be directories with names corresponding
                               to environment names, children of those directories should be environment and requirements files.
     """
-    from .main import REPOSITORY_PATH
+    from .main import REPOSITORY_PATH, NATIVE_COPY
     # just copy the whole tree...
     print('Copying Environments')
-    copytree(environments_root, REPOSITORY_PATH / ENV_DEFS, dirs_exist_ok=True)
+    copytree(environments_root, REPOSITORY_PATH / ENV_DEFS, dirs_exist_ok=True, copy_function=native_copy if NATIVE_COPY else copy2)

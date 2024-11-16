@@ -2,10 +2,11 @@ import pathlib
 import subprocess
 import sys
 
-from shutil import copy, copytree, rmtree
+from shutil import copy, copytree, rmtree, copy2
 from os import remove, path as osp, getcwd, environ, makedirs
 
 from botwinick_utils.platforms import operating_system as _current_os
+from botwinick_utils.paths import native_copy
 from scitrera_app_framework import init_framework_desktop, get_logger, get_working_path
 from vpd.next.util import open_ensure_paths, read_yaml
 from yaml import safe_dump as yaml_write
@@ -34,6 +35,7 @@ else:
 
 APP_NAME = 'slaunch'
 REPOSITORY_PATH = pathlib.Path(environ.get('SLAUNCH_REPOSITORY_PATH', '/slaunch_repo'))
+NATIVE_COPY = False
 
 
 def _env_def_args(name: str, src=None):
@@ -244,7 +246,8 @@ def check_update_lib(env_name, lib_name, lib_ver, local_data=None, update=False)
         apply_pip_requirements(env_name, *lib_manifest.get('pip_requirements', []))
         # if remote, we also need to copy the files over!
         logger.info('Copying library data files for %s v%s', lib_name, lib_ver)
-        copytree(remote_lib_path, local_lib_path, dirs_exist_ok=True, ignore_dangling_symlinks=True)
+        copytree(remote_lib_path, local_lib_path, dirs_exist_ok=True, ignore_dangling_symlinks=True,
+                 copy_function=native_copy if NATIVE_COPY else copy2)
 
     return
 
@@ -264,7 +267,7 @@ def launch_app(name: str, *args, apps_manifest: dict, libs_manifest: dict,
         raise ValueError(f'{name} is not a recognized application')
 
     # establish version
-    if version is None:
+    if version is None:  # TODO: add function to determine app/libs version that can include selectable channels
         # get current/latest version from manifest
         version = apps_manifest[name].get('current', apps_manifest[name]['latest'])
         logger.debug('version not provided, using: %s', version)
@@ -344,7 +347,8 @@ def launch_app(name: str, *args, apps_manifest: dict, libs_manifest: dict,
     if remote or (entrypoint and not (local_app_path / entrypoint).exists()):
         global REPOSITORY_PATH
         logger.info('Copying data files for %s v%s', name, version)
-        copytree(REPOSITORY_PATH / name / version, local_app_path, dirs_exist_ok=True, ignore_dangling_symlinks=True)
+        copytree(REPOSITORY_PATH / name / version, local_app_path, dirs_exist_ok=True, ignore_dangling_symlinks=True,
+                 copy_function=native_copy if NATIVE_COPY else copy2)
 
     # TODO: maybe checksum verification?
 
