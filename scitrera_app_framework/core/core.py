@@ -379,7 +379,7 @@ def log_framework_variables(v: Variables, log_module_versions=False, **kwargs):
     # TODO: more complex/thorough code to identify material that should be redacted
     logger.info('framework variables%s = %s', kwargs,
                 {k: '(redacted)' if ('password' in k.lower() or 'secret' in k.lower()) else val
-                 for (k, val) in v.export_all_variables().items()})
+                 for (k, val) in v.export_all_variables().items() if not (k.startswith('=|') and k.endswith('|'))})
 
     # experimental: include logging module versions
     if log_module_versions:
