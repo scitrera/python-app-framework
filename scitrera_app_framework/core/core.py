@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Iterable
 
 import os
 import faulthandler
@@ -225,6 +226,25 @@ def is_stateful_ready(v: Variables):
 
 
 def load_strategy(v: Variables, parent_type, prefix='STRATEGY'):
+    """
+    This function will import a python type and return all environment variables that have the same prefix as
+    "xxx_type" where xxx is the prefix. So if you want to load `hello_world_widget_factory` and get configuration
+    for `hello_world_widget_factory`, you could set environment variables such as:
+
+    WIDGET_FACTORY_TYPE="mypythonpackage.factories.HelloWorldWidgetFactory"
+    WIDGET_FACTORY_SPIN_RATE=9000
+
+    and then call this function such as
+
+    >> factory_type, factory_kwargs = load_strategy(v, AbstractFactory, prefix="WIDGET_FACTORY")
+
+    Obviously intended for specific application usage, but useful nonetheless.
+
+    :param v: variables instance (no default provided, you must supply it)
+    :param parent_type: parent class of the type that you are expecting
+    :param prefix: prefix that environment variables will have
+    :return: tuple of type, kwargs populated from environment variables, importing python packages/modules as needed.
+    """
     # dynamic strategy loading and configuration
     strategy_kwargs = v.import_from_env_by_prefix(prefix)
     strategy_type_name = strategy_kwargs.pop('type', None)
@@ -374,12 +394,35 @@ _lmv = log_module_versions
 
 
 # noinspection PyShadowingNames
-def log_framework_variables(v: Variables, log_module_versions=False, **kwargs):
+def log_framework_variables(v: Variables = None, prefixes: str | Iterable[str] = (), exclude_prefixes: str | Iterable[str] = (),
+                            log_module_versions: bool = False, **kwargs):
+    """
+    Function to log framework variables. By default, logs all variables. Can be filtered by only including specified prefixes
+    or excluding specified prefixes. The framework variables will be logged as an INFO statement.
+
+    :param v: variables instance (None for default instance)
+    :param prefixes: iterable of str prefixes to include (all included if not specified)
+    :param exclude_prefixes: iterable of str prefixes to exclude (none excluded if not specified)
+    :param log_module_versions: whether this function should also call log_module_versions. This was used at some point, but is now
+                                deprecated. The default is False and you can elect to log module versions if you want as a separate
+                                decision.
+    :param kwargs: kwargs are intended to be part of differentiating this application from others (e.g. ID, symbol, etc.)
+    """
+    if v is None:
+        v = _get_default_vars_instance()
+    # developer convenience functionality to support a single prefix for either of those options
+    if isinstance(prefixes, str):
+        prefixes = (prefixes,)
+    if isinstance(exclude_prefixes, str):
+        exclude_prefixes = (exclude_prefixes,)
+
     logger = get_logger(v)
     # TODO: more complex/thorough code to identify material that should be redacted
     logger.info('framework variables%s = %s', kwargs,
-                {k: '(redacted)' if ('password' in k.lower() or 'secret' in k.lower()) else val
-                 for (k, val) in v.export_all_variables().items() if not (k.startswith('=|') and k.endswith('|'))})
+                {k: '(redacted)' if any(x in k.lower() for x in ('password', 'secret', 'credentials', 'token',)) else val
+                 for (k, val) in sorted(v.export_all_variables().items(), key=lambda kv: kv[0])
+                 if not ((k.startswith('=|') and k.endswith('|')) or any(k.startswith(x) for x in exclude_prefixes)) and
+                 (not prefixes or any(k.startswith(x) for x in prefixes))})
 
     # experimental: include logging module versions
     if log_module_versions:
