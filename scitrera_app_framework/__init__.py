@@ -72,4 +72,34 @@ def init_framework_desktop(*args, **kwargs):
     return init_framework(*args, **kwargs)
 
 
+def init_framework_test_harness(*args, **kwargs):
+    """
+    Alternate bootstrap function for `init_framework` meant to be used for testing harnesses.
+    All arguments and keyword arguments are the same as `init_framework`, so see that function for details.
+    However, it has the following default values that may vary from the base `init_framework`:
+    * fault_handler is False by default
+    * log_level is DEBUG by default
+    * pyroscope is False by default (ok not different, but still worth saying)
+    * shutdown_hooks are False by default
+    * stateful is False by default
+
+    :param args: arguments from `init_framework`
+    :param kwargs: keyword arguments from `init_framework`
+    :return:
+    """
+    if 'fault_handler' not in kwargs:
+        kwargs['fault_handler'] = False
+    if 'log_level' not in kwargs:
+        kwargs['log_level'] = 'DEBUG'
+    if 'pyroscope' not in kwargs:
+        kwargs['pyroscope'] = False
+    if 'shutdown_hooks' not in kwargs:
+        kwargs['shutdown_hooks'] = False
+    if 'stateful' not in kwargs:
+        kwargs['stateful'] = False
+
+    # continue usual framework init
+    return init_framework(*args, **kwargs)
+
+
 init_framework.__doc__ = _init_framework.__doc__
