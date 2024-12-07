@@ -10,6 +10,26 @@ from types import ModuleType
 from typing import Optional, Generator, Type, Any
 
 
+def _split_module_name(ref: str) -> tuple[str, str]:
+    """
+    Internal function to split a given fully qualified python ref to a package/module name and a name of the
+    last item (class, function, variable, etc.)
+
+    :param ref: fully qualified python ref to something within a package/module
+    :return: tuple of (module_name, name)
+    """
+    if not ref:
+        raise ValueError('Invalid ref provided')
+
+    parts = ref.split('.')
+    if len(parts) < 2:
+        raise ValueError('ref must be in the format "module.name" or "package...module.name"')
+
+    module_name = '.'.join(parts[:-1])
+    name = parts[-1]
+    return module_name, name
+
+
 def import_modules(package_name: str, recursive: bool = True) -> Generator[ModuleType]:
     """
     Import all modules from a given package and optionally do so recursively for subpackages.
@@ -94,15 +114,7 @@ def get_python_type_by_name(type_name: str, expected_parent_type: Type[Any]) -> 
     :raises ModuleNotFoundError: If the specified module cannot be imported.
     :raises AttributeError: If the type name cannot be found within the module.
     """
-    if not type_name:
-        raise ValueError('Invalid type_name provided')
-
-    parts = type_name.split('.')
-    if len(parts) < 2:
-        raise ValueError('type_name must be in the format "module.submodule.ClassName"')
-
-    module_name = '.'.join(parts[:-1])
-    class_name = parts[-1]
+    module_name, class_name = _split_module_name(type_name)
 
     try:
         # Import the module
@@ -145,3 +157,27 @@ def path_for_module(module_name: str, try_import=True, raise_exceptions=True) ->
     elif raise_exceptions:
         raise ModuleNotFoundError(f"Module '{module_name}' not found")
     return None
+
+
+def ext_get_python(fully_qualified_module_ref: str):
+    """
+    Convenience function to get a function (or any python object/type) from a given package/module with name.
+    This can be used similarly to ext_parse_boolean and ext_parse_csv as a type_fn to interpret a given string
+    into a python type, callable, or variable.
+
+    Note that is gets the value of the requested reference at call-time (this does not maintain a dynamic reference/link).
+
+    :param fully_qualified_module_ref: fully qualified name of python object to get in form: module.name or package.module.name
+    :return: the requested python object or raises ValueError if unable to find requested object
+    """
+    module_name, name = _split_module_name(fully_qualified_module_ref)
+    module = importlib.import_module(module_name)
+    if not module:
+        raise ValueError(f'unable to find module: {module_name}')
+
+    _no_match = object()  # ref a globally accessible no_match???
+    fn = getattr(module, name, _no_match)
+    if name is _no_match:
+        raise ValueError(f'unable to find: {module_name}.{name}')
+
+    return fn
