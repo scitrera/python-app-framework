@@ -26,6 +26,7 @@ _VAR_MAIN_LOGGER = '=|main_logger|'
 
 
 def _get_default_vars_instance():
+    """ Internal function to get/initialize the default variables instance. """
     global _default_vars_inst
     if _default_vars_inst is None:
         _default_vars_inst = Variables()
@@ -33,6 +34,13 @@ def _get_default_vars_instance():
 
 
 def get_variables(v: Variables = None):
+    """
+    Function to "filter" a reference to a Variables object such that if a Variables object instance
+    is NOT provided then the default instance will be returned instead.
+
+    :param v: optional/possible Variables instance
+    :return: either the given Variables instance or the default Variables instance
+    """
     if isinstance(v, Variables):
         return v
     return _get_default_vars_instance()
@@ -40,10 +48,17 @@ def get_variables(v: Variables = None):
 
 # noinspection PyCompatibility
 def register_shutdown_function(fn, *args, **kwargs):
+    """
+    Register a function to shut down when the framework shuts down.
+    :param fn: reference to function
+    :param args: arguments to pass to function
+    :param kwargs: kwargs to pass to function
+    """
     _sigterm_hooks.append((fn, args, kwargs))
 
 
-def install_signal_hooks(v: Variables = None, via_at_exit=True):
+def _install_signal_hooks(v: Variables = None, via_at_exit=True):
+    """ Internal function to install signal/at_exit hooks for framework """
     if v is None:
         v = _get_default_vars_instance()
 
@@ -75,7 +90,17 @@ def install_signal_hooks(v: Variables = None, via_at_exit=True):
     return
 
 
-def get_logger(v: Variables = None, logger=None, name=None):
+def get_logger(v: Variables = None, logger=None, name=None) -> logging.Logger:
+    """
+    Get a logging.Logger instance tied to the framework. It is either the framework's main logger,
+    a derived logger using given name, or an emergency logger created to ensure this function
+    always returns a logger.
+
+    :param v: variables instance or None to use default instance
+    :param logger: potentially a logger to pass through if it makes sense to provide your own in this context
+    :param name: optional name to use to create a child logger
+    :return: logger instance
+    """
     if v is None:
         v = _get_default_vars_instance()
 
@@ -91,6 +116,7 @@ def get_logger(v: Variables = None, logger=None, name=None):
 
 
 def _init_pyroscope_profiling(v: Variables = None, app_name=None, **tags):
+    """ Internal function to init pyroscope profiling """
     if v is None:
         v = _get_default_vars_instance()
 
@@ -131,6 +157,7 @@ def _init_pyroscope_profiling(v: Variables = None, app_name=None, **tags):
 
 
 def _init_logging(logger_name, level='INFO', formatter=None, stream=sys.stderr):
+    """ Internal function to initialize logging """
     log_level = logging.getLevelName(level.upper())
     logging.root.setLevel(log_level)
     # TODO: logging.root manipulation makes sense for container init scenario but not when multiple environments allowed
@@ -147,6 +174,7 @@ def _init_logging(logger_name, level='INFO', formatter=None, stream=sys.stderr):
 
 
 def _log_fmt_json(**static_fields):
+    """ Internal function to create formatter instance for JSON logs """
     try:
         from pythonjsonlogger.jsonlogger import JsonFormatter
 
@@ -186,6 +214,16 @@ def _log_fmt_json(**static_fields):
 
 def _init_stateful_root(v: Variables, local_name=None, default_stateful_root='./scratch',
                         default_run_id=None, default_run_serial=None, default_chdir=True):
+    """
+    Internal function to initialize stateful root/stateful features.
+
+    :param v: variables instance
+    :param local_name: application name override
+    :param default_stateful_root: default stateful root path
+    :param default_run_id: default run_id (part of establishing path)
+    :param default_run_serial: default run_serial (part of establishing path)
+    :param default_chdir: whether to change directories to stateful root by default
+    """
     logger = get_logger(v)
 
     if local_name is None:
@@ -220,12 +258,14 @@ def is_stateful_ready(v: Variables):
     :param v: framework variables object
     :return: stateful root if stateful init completed successfully or None if not stateful ready
     """
+    if v is None:
+        v = _get_default_vars_instance()
     if v.get(_VAR_APP_STATEFUL_READY):  # should be True or None
         return v.get(_VAR_APP_STATEFUL_ROOT)  # if ready, we expect this to be a defined value
     return None
 
 
-def load_strategy(v: Variables, parent_type, prefix='STRATEGY'):
+def load_strategy(v: Variables, parent_type, prefix='STRATEGY', drop_prefix=True):
     """
     This function will import a python type and return all environment variables that have the same prefix as
     "xxx_type" where xxx is the prefix. So if you want to load `hello_world_widget_factory` and get configuration
@@ -236,23 +276,33 @@ def load_strategy(v: Variables, parent_type, prefix='STRATEGY'):
 
     and then call this function such as
 
-    >> factory_type, factory_kwargs = load_strategy(v, AbstractFactory, prefix="WIDGET_FACTORY")
+    >> factory_type, factory_kwargs = load_strategy(v, parent_type=AbstractFactory, prefix="WIDGET_FACTORY")
 
-    Obviously intended for specific application usage, but useful nonetheless.
+    If drop_prefix is True (default), then the contents of factory_kwargs will be:
+    { 'spin_rate: '9000', }
+
+    Note that if type functions have been defined for the "kwargs" variables, they will be honored and manage type conversion.
+
+    Also note that... obviously the function name implies that this was intended for a specific application; however, it is
+    generally a useful component for many different applications. For the moment, the naming will be preserved, but it might
+    make sense to change this name to be more generic in the future...
 
     :param v: variables instance (no default provided, you must supply it)
     :param parent_type: parent class of the type that you are expecting
     :param prefix: prefix that environment variables will have
-    :return: tuple of type, kwargs populated from environment variables, importing python packages/modules as needed.
+    :param drop_prefix: whether the prefix should be removed from the string keys of the resulting "strategy" kwargs. Default is True.
+    :return: tuple of (type, kwargs populated from environment variables); importing python packages/modules as needed.
     """
+    if v is None:
+        v = _get_default_vars_instance()
     # dynamic strategy loading and configuration
-    strategy_kwargs = v.import_from_env_by_prefix(prefix)
+    strategy_kwargs = v.import_from_env_by_prefix(prefix, drop_prefix=drop_prefix)
     strategy_type_name = strategy_kwargs.pop('type', None)
 
     try:
         strategy = get_python_type_by_name(strategy_type_name, parent_type)
     except (ImportError, AttributeError, TypeError, ValueError) as e:
-        get_logger(v).error('unable to load strategy "%s": %s', strategy_type_name, e)
+        get_logger(v).error('unable to load strategy "%s": %s: %s', strategy_type_name, e.__class__.__name__, e)
         strategy = None
 
     return strategy, strategy_kwargs
@@ -359,8 +409,8 @@ def init_framework(base_app_name: str,
 
     # install signal shutdown hooks (must be on MainThread)
     if v.environ('SAF_INSTALL_SHUTDOWN_HOOKS', default=shutdown_hooks, type_fn=ext_parse_bool):
-        install_signal_hooks(v, via_at_exit=v.environ('SAF_SHUTDOWN_HOOK_VIA_ATEXIT',
-                                                      default=shutdown_hooks_via_atexit, type_fn=ext_parse_bool))
+        _install_signal_hooks(v, via_at_exit=v.environ('SAF_SHUTDOWN_HOOK_VIA_ATEXIT',
+                                                       default=shutdown_hooks_via_atexit, type_fn=ext_parse_bool))
 
     # do pyroscope init -- built in support for pyroscope profiling
     if v.environ('SAF_SETUP_PYROSCOPE', default=pyroscope, type_fn=ext_parse_bool):
@@ -380,6 +430,9 @@ def init_framework(base_app_name: str,
 
 
 def log_module_versions(v: Variables):
+    """
+    Log __version__ variables for modules in sys.modules as INFO statement
+    """
     from sys import modules
 
     logger = get_logger(v)
@@ -417,12 +470,12 @@ def log_framework_variables(v: Variables = None, prefixes: str | Iterable[str] =
         exclude_prefixes = (exclude_prefixes,)
 
     logger = get_logger(v)
+    result = {k: '(redacted)' if any(x in k.lower() for x in ('password', 'secret', 'credentials', 'token',)) else val
+              for (k, val) in sorted(v.export_all_variables().items(), key=lambda kv: kv[0])
+              if not ((k.startswith('=|') and k.endswith('|')) or any(k.startswith(x) for x in exclude_prefixes)) and
+              (not prefixes or any(k.startswith(x) for x in prefixes))}
     # TODO: more complex/thorough code to identify material that should be redacted
-    logger.info('framework variables%s = %s', kwargs,
-                {k: '(redacted)' if any(x in k.lower() for x in ('password', 'secret', 'credentials', 'token',)) else val
-                 for (k, val) in sorted(v.export_all_variables().items(), key=lambda kv: kv[0])
-                 if not ((k.startswith('=|') and k.endswith('|')) or any(k.startswith(x) for x in exclude_prefixes)) and
-                 (not prefixes or any(k.startswith(x) for x in prefixes))})
+    logger.info('framework variables%s = %s', kwargs, result)
 
     # experimental: include logging module versions
     if log_module_versions:

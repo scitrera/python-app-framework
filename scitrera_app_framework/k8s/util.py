@@ -5,6 +5,13 @@ from vpd.next.k8s.config import apply_yaml_object, parse_yaml
 
 
 def get_metadata_name(k8s_object):
+    """
+    Get the name from the metadata of this k8s object. It will work on either a dict representation
+    or a kubernetes python API client object
+
+    :param k8s_object: kubernetes object
+    :return: metadata name or None
+    """
     if isinstance(k8s_object, dict):
         return k8s_object.get('metadata', {}).get('name', None)
     try:
@@ -14,6 +21,13 @@ def get_metadata_name(k8s_object):
 
 
 def get_metadata_namespace(k8s_object):
+    """
+    Get the namespace from the metadata of this k8s object. It will work on either a dict representation
+    or a kubernetes python API client object
+
+    :param k8s_object: kubernetes object
+    :return: metadata namespace or None
+    """
     if isinstance(k8s_object, dict):
         return k8s_object.get('metadata', {}).get('namespace', None)
     try:
@@ -23,6 +37,13 @@ def get_metadata_namespace(k8s_object):
 
 
 def get_headless_service_dns_name_for_pod(pod_def, service_def):
+    """
+    Construct the headless service DNS name for a given pod & service combination based on the metadata of the objects.
+
+    :param pod_def: pod definition
+    :param service_def: service definition
+    :return: headless service DNS name
+    """
     service_name = get_metadata_name(service_def)
     namespace = get_metadata_namespace(service_def)
     pod_name = get_metadata_name(pod_def)
@@ -106,30 +127,73 @@ def get_pod_env(pod_def, container_name=None, container_index=0):
 
 
 def pod_exists(pod_def):
+    """
+    Does the given pod exist in k8s?
+
+    :param pod_def: pod definition
+    :return: boolean
+    """
     return apply_yaml_object(pod_def, verb='get') is not None
 
 
 def _is_running_phase(phase):
+    """
+    Is the given pod phase == Running?
+
+    :param phase: pod phase
+    :return: boolean
+    """
     return 'Running' == phase
 
 
 def _is_not_running_phase(phase):
+    """
+    Is the given pod phase != Running?
+
+    :param phase: pod phase
+    :return: boolean
+    """
     return 'Running' != phase
 
 
 def _is_active_phase(phase):
+    """
+    Is the given pod "active" (pending or running)
+
+    :param phase: pod phase
+    :return: boolean
+    """
     return phase in ('Running', 'Pending')
 
 
 def _is_terminated_phase(phase):
+    """
+    Is the given pdd "terminated" (either succeeded or failed)
+
+    :param phase: pod phase
+    :return: boolean
+    """
     return phase in ('Succeeded', 'Failed')
 
 
 def _is_not_terminated_phase(phase):
+    """
+    Is the give pod NOT "terminated" (NOT either succeeded or failed)
+
+    :param phase: pod phase
+    :return: boolean
+    """
     return phase not in ('Succeeded', 'Failed')
 
 
 def is_pod_running(pod_def, strict=False):
+    """
+    Is the given pod (by pod definition) running?
+
+    :param pod_def: pod definition
+    :param strict: if strict, only return True if pod is RUNNING, if not strict, Pending would also count.
+    :return: boolean
+    """
     state = apply_yaml_object(pod_def, verb='get')  # get existing state
     if state is None:  # does not exist, create
         return False
@@ -141,6 +205,12 @@ def is_pod_running(pod_def, strict=False):
 
 
 def is_pod_in_terminated_state(pod_def):
+    """
+    Is the given pod terminated?
+
+    :param pod_def: pod definition
+    :return: boolean
+    """
     state = apply_yaml_object(pod_def, verb='get')  # get existing state
     if state is None:  # does not exist, create
         return False
@@ -150,6 +220,17 @@ def is_pod_in_terminated_state(pod_def):
 
 
 def start_pod(pod_def, wait=True, replace=False, wait_delay=0.25, wait_until_terminated=False):
+    """
+    Start the given pod (by definition)
+
+    :param pod_def: pod definition
+    :param wait: whether to wait for the pod to be running or finished (depending on other options)
+    :param replace: whether to replace an existing pod with same name & namespace
+    :param wait_delay: busy-wait loop sleep delay (only applies if waiting).
+    :param wait_until_terminated: if True, `wait` will wait until pod is terminated (regardless of success/fail).
+                                  if False, `wait` will wait until pod is running.
+    :return: the pod definition
+    """
     state = apply_yaml_object(pod_def, verb='get')  # get existing state
     if state is None:  # does not exist, create
         state = apply_yaml_object(pod_def)
@@ -169,3 +250,10 @@ def start_pod(pod_def, wait=True, replace=False, wait_delay=0.25, wait_until_ter
             phase = state.get('status', {}).get('phase', None)
 
     return state
+
+
+__all__ = (
+    'apply_yaml_object', 'start_pod', 'is_pod_running', 'is_pod_in_terminated_state', 'pod_exists', 'get_pod_env',
+    'get_metadata_name', 'get_metadata_namespace', 'get_headless_service_dns_name_for_pod', 'merge_env_vars',
+    'fixed_env_vars', 'parse_yaml',
+)
