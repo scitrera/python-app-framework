@@ -4,7 +4,7 @@ from .core import (
     init_framework as _init_framework,
 )
 from .util import (
-    ext_parse_bool, ext_parse_csv,
+    ext_parse_bool, ext_parse_csv, ext_get_python,
 )
 from .base_plugins import (
     register_package_plugins,
@@ -15,12 +15,20 @@ from .base_plugins import (
 
 def init_framework(*args, **kwargs):
     register_base_plugins = kwargs.pop('base_plugins', True)
+    enable_pyroscope = kwargs.pop('pyroscope', False)
+
     v = _init_framework(*args, **kwargs)
 
+    # transitioned pyroscope out of core and into being a plugin -- it should be the first thing we load after internal init_framework
+    from .ext_plugins.pyroscope_plugin import PyroscopePlugin, PYROSCOPE_ENABLED
+    v.set_default_value(PYROSCOPE_ENABLED, enable_pyroscope)  # if not defined in environment, fallback to kwarg (or False)
+    register_plugin(PyroscopePlugin, v, init=True)
+
+    # then base plugins
     if v.environ('SAF_BASE_PLUGINS', default=register_base_plugins, type_fn=ext_parse_bool):
         # import all base_plugins
         from . import base_plugins
-        register_package_plugins(base_plugins.__name__, v)
+        register_package_plugins(base_plugins.__name__, v, recursive=False)  # explicitly set do not search base_plugins recursively
 
     # register shutdown function to shut down plugins upon initializing plugins...
     from .core.plugins import shutdown_all_plugins

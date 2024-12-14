@@ -23,6 +23,7 @@ _default_vars_inst = None
 _VAR_APP_STATEFUL_ROOT = '=|app_state_root|'
 _VAR_APP_STATEFUL_READY = '=|app_state_ready|'
 _VAR_MAIN_LOGGER = '=|main_logger|'
+_VAR_PARAM_MAP = '=|PARAM_MAP|'
 
 
 def _get_default_vars_instance():
@@ -113,47 +114,6 @@ def get_logger(v: Variables = None, logger=None, name=None) -> logging.Logger:
     if name is not None:
         return logger.getChild(name)
     return logger
-
-
-def _init_pyroscope_profiling(v: Variables = None, app_name=None, **tags):
-    """ Internal function to init pyroscope profiling """
-    if v is None:
-        v = _get_default_vars_instance()
-
-    logger = get_logger(v)
-    logger.info('Initializing Pyroscope Profiling')
-
-    try:
-        # noinspection PyPackageRequirements,PyUnresolvedReferences
-        import pyroscope
-
-        app_name = app_name or v.get('APP_NAME')
-        tags.update({
-            'app_name': app_name,
-            'run_id': v.environ('RUN_ID', default='msa'),
-        })
-        # append tags from environments variables in the form:
-        # PYROSCOPE_TAG_TAGX=VALUE_X --> TAGX=VALUE_X
-        tags.update(v.import_from_env_by_prefix('PYROSCOPE_TAG'))
-
-        pyroscope.configure(
-            application_name=app_name,
-            server_address=v.environ('PYROSCOPE_SERVER', default='http://pyroscope.pyroscope.svc:4040'),
-            basic_auth_username=v.environ('PYROSCOPE_USER', default=''),
-            basic_auth_password=v.environ('PYROSCOPE_TOKEN', default=''),
-            tenant_id=v.environ('PYROSCOPE_TENANT', default=''),
-            sample_rate=v.environ('PYROSCOPE_SAMPLE_RATE', type_fn=int, default=100),
-            detect_subprocesses=v.environ('PYROSCOPE_DETECT_SUBPROCESSES', type_fn=ext_parse_bool, default=True),
-            oncpu=v.environ('PYROSCOPE_ON_CPU', type_fn=ext_parse_bool, default=True),
-            gil_only=v.environ('PYROSCOPE_GIL_ONLY', type_fn=ext_parse_bool, default=True),
-            enable_logging=v.environ('PYROSCOPE_ENABLE_LOGGING', type_fn=ext_parse_bool, default=False),
-            tags=tags,
-        )
-
-    except ImportError as e:
-        logger.warning('Pyroscope was not able to be initialized: %s', e)
-
-    return
 
 
 def _init_logging(logger_name, level='INFO', formatter=None, stream=sys.stderr):
@@ -293,11 +253,11 @@ def load_strategy(v: Variables, parent_type, prefix='STRATEGY', drop_prefix=True
     :param drop_prefix: whether the prefix should be removed from the string keys of the resulting "strategy" kwargs. Default is True.
     :return: tuple of (type, kwargs populated from environment variables); importing python packages/modules as needed.
     """
-    if v is None:
-        v = _get_default_vars_instance()
+    # if v is None:
+    #     v = _get_default_vars_instance()
     # dynamic strategy loading and configuration
     strategy_kwargs = v.import_from_env_by_prefix(prefix, drop_prefix=drop_prefix)
-    strategy_type_name = strategy_kwargs.pop('type', None)
+    strategy_type_name = strategy_kwargs.pop('type', None)  # type: str|None
 
     try:
         strategy = get_python_type_by_name(strategy_type_name, parent_type)
@@ -329,7 +289,6 @@ def get_working_path(v: Variables = None, default='.', env_key='DATA_WORKING_PAT
 
 def init_framework(base_app_name: str,
                    fixed_logger=None, log_format=None, log_level='INFO',
-                   pyroscope=False,
                    shutdown_hooks=True, shutdown_hooks_via_atexit=True,
                    stateful=True, stateful_chdir=True, default_stateful_root='./scratch', default_run_id=None, default_serial_strategy=None,
                    fault_handler=True,
@@ -345,7 +304,6 @@ def init_framework(base_app_name: str,
     :param log_format: either 'json' to log following json message per line convention to facilitate log aggregation
                         or a %-style log format string.
     :param log_level: the default log level if not set by env variable.
-    :param pyroscope: whether the default functionality is to initialize pyroscope (env variable will override this)
     :param shutdown_hooks: whether the default functionality is to install shutdown hooks (env variable will override this)
     :param shutdown_hooks_via_atexit: whether the default functionality for shutdown hooks is to use stdlib "atexit"
     :param stateful: whether the default functionality is to try to install stateful functionality (env variable will override this)
@@ -365,7 +323,7 @@ def init_framework(base_app_name: str,
         v = _get_default_vars_instance()
 
     # normalize parameters map w/ environment fallback values
-    param_map = {k.lower(): v.environ(k.upper(), default=val) for k, val in params.items()}
+    param_map = v.set(_VAR_PARAM_MAP, {k.lower(): v.environ(k.upper(), default=val) for k, val in params.items()})
 
     # install python fault handler
     if v.environ('SAF_ENABLE_PYTHON_FAULT_HANDLER', default=fault_handler, type_fn=ext_parse_bool) and sys.stderr is not None:
@@ -373,11 +331,11 @@ def init_framework(base_app_name: str,
         faulthandler.enable()
 
     # determine app name with suffixes attached
-    name_ = base_app_name
+    name_ = v.set('SAF_BASE_APP_NAME', base_app_name)
     name_params = [n for n in param_map.keys() if n not in unnamed_params]
     if len(name_params) > 0:
         name_ += sep + sep.join((str(param_map[n]) for n in name_params))
-    app_name = v.environ('APP_NAME', default=name_)
+    app_name = v.environ('APP_NAME', default=name_)  # allow environment variable override/configuration of APP_NAME
     build_image_name = v.environ('BUILD_IMAGE_NAME', default=base_app_name)
     build_container_version = v.environ('BUILD_CONTAINER_VERSION', default='DEV')
 
@@ -411,10 +369,6 @@ def init_framework(base_app_name: str,
     if v.environ('SAF_INSTALL_SHUTDOWN_HOOKS', default=shutdown_hooks, type_fn=ext_parse_bool):
         _install_signal_hooks(v, via_at_exit=v.environ('SAF_SHUTDOWN_HOOK_VIA_ATEXIT',
                                                        default=shutdown_hooks_via_atexit, type_fn=ext_parse_bool))
-
-    # do pyroscope init -- built in support for pyroscope profiling
-    if v.environ('SAF_SETUP_PYROSCOPE', default=pyroscope, type_fn=ext_parse_bool):
-        _init_pyroscope_profiling(v, app_name=base_app_name, **param_map)
 
     # init stateful root (which is also configuration dependent, so honestly, it probably should just always be on by default...)
     if v.environ('SAF_SETUP_STATEFUL', default=stateful, type_fn=ext_parse_bool):
