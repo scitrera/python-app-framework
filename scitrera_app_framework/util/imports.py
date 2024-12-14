@@ -7,7 +7,9 @@ import pathlib
 import pkgutil
 
 from types import ModuleType
-from typing import Optional, Generator, Type, Any
+from typing import Optional, Generator, Type, Any, TypeVar
+
+T = TypeVar('T')
 
 
 def _split_module_name(ref: str) -> tuple[str, str]:
@@ -70,10 +72,10 @@ def import_modules(package_name: str, recursive: bool = True) -> Generator[Modul
 
 
 def find_types_in_modules(package_name: str,
-                          base_type: Type,
+                          base_type: Type[T],
                           recursive: bool = True,
                           exclude_base_type: bool = True,
-                          exclude_abstract: bool = True) -> Generator[Type]:
+                          exclude_abstract: bool = True) -> Generator[Type[T], None, None]:
     """
     Find all classes (types) in the given package and its submodules that are subclasses of the given base_type.
 
@@ -103,7 +105,7 @@ def find_types_in_modules(package_name: str,
     return
 
 
-def get_python_type_by_name(type_name: str, expected_parent_type: Type[Any]) -> Type[Any]:
+def get_python_type_by_name(type_name: str, expected_parent_type: Type[T]) -> Type[T]:
     """
     Retrieve a Python class/type by its fully qualified name and ensure it is a subclass of the expected parent type.
 
@@ -159,7 +161,7 @@ def path_for_module(module_name: str, try_import=True, raise_exceptions=True) ->
     return None
 
 
-def ext_get_python(fully_qualified_module_ref: str):
+def ext_get_python(fully_qualified_module_ref: str) -> Any:
     """
     Convenience function to get a function (or any python object/type) from a given package/module with name.
     This can be used similarly to ext_parse_boolean and ext_parse_csv as a type_fn to interpret a given string
