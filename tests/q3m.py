@@ -3,8 +3,7 @@ from __future__ import annotations
 from logging import Logger
 
 from scitrera_app_framework import (init_framework, register_plugin, get_extensions)
-from scitrera_app_framework.api import Plugin
-from scitrera_app_framework.api.variables2 import Variables2 as Variables
+from scitrera_app_framework.api import Plugin, Variables
 
 ext_name = 'multi-test'
 

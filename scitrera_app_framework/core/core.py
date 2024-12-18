@@ -294,7 +294,7 @@ def init_framework(base_app_name: str,
                    fault_handler=True,
                    sep='-', unnamed_params=(),
                    v: Variables = None,
-                   **params):
+                   **params) -> Variables:
     """
     Initialize the Scitrera Application Framework. This should be the first thing to be called in a "main" function
     for an application or container entrypoint.

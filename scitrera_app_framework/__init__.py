@@ -1,3 +1,6 @@
+from .api import (
+    Variables, Plugin,
+)
 from .core import (
     register_shutdown_function, get_logger, get_working_path, get_variables,
     get_extension, register_plugin, init_all_plugins, get_extensions,
@@ -13,7 +16,7 @@ from .base_plugins import (
 )
 
 
-def init_framework(*args, **kwargs):
+def init_framework(*args, **kwargs) -> Variables:
     register_base_plugins = kwargs.pop('base_plugins', True)
     enable_pyroscope = kwargs.pop('pyroscope', False)
 
@@ -26,7 +29,6 @@ def init_framework(*args, **kwargs):
 
     # then base plugins
     if v.environ('SAF_BASE_PLUGINS', default=register_base_plugins, type_fn=ext_parse_bool):
-        # import all base_plugins
         from . import base_plugins
         register_package_plugins(base_plugins.__name__, v, recursive=False)  # explicitly set do not search base_plugins recursively
 
@@ -37,7 +39,7 @@ def init_framework(*args, **kwargs):
     return v
 
 
-def init_framework_desktop(*args, **kwargs):
+def init_framework_desktop(*args, **kwargs) -> Variables:
     """
     Alternate bootstrap function for `init_framework`. All arguments and keyword arguments are the
     same as `init_framework`, so see that function for details. However, the default values for
@@ -80,7 +82,7 @@ def init_framework_desktop(*args, **kwargs):
     return init_framework(*args, **kwargs)
 
 
-def init_framework_test_harness(*args, **kwargs):
+def init_framework_test_harness(*args, **kwargs) -> Variables:
     """
     Alternate bootstrap function for `init_framework` meant to be used for testing harnesses.
     All arguments and keyword arguments are the same as `init_framework`, so see that function for details.

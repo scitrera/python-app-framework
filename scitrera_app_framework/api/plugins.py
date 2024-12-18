@@ -4,7 +4,7 @@ from abc import abstractmethod
 from logging import Logger
 from typing import Iterable
 
-from .variables2 import Variables2 as Variables
+from .variables import Variables as Variables, NOT_SET
 
 
 class Plugin(object):
@@ -105,7 +105,7 @@ class Plugin(object):
         return
 
 
-def enabled_option_pattern(plugin: Plugin, v: Variables, env_variable: str, default: str, self_attr: str = None) -> bool:
+def enabled_option_pattern(plugin: Plugin, v: Variables, env_variable: str, default: str = NOT_SET, self_attr: str = None) -> bool:
     """
     Pattern function to enable creating subclasses or related plugins such that this function can provide the result
     of the `is_enabled` method by matching an environment variable value to either the plugin name or an attribute of the plugin class

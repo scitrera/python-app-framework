@@ -10,22 +10,22 @@ _NOT_INIT = object()
 
 
 def _plugin_registry(v: Variables = None) -> Variables:
-    return v.get_or_set('=|PR|', default_fn=Variables)
+    return v.get_or_set('=|PR|', value_fn=Variables)
 
 
 def _impl_registry(v: Variables = None) -> dict:
     # IR = Implementations Registry (formerly Extensions Registry)
-    return v.get_or_set('=|IR|', default_fn=dict)
+    return v.get_or_set('=|IR|', value_fn=dict)
 
 
 def _impl_options(ext_name: str, v: Variables = None) -> set[Plugin]:  # TODO: without hash/eq, sets for plugins sorta makes no sense
     # EIR = Extension Implementations Registry
-    return v.get_or_set('=|EIR|', default_fn=Variables).get_or_set(ext_name, default_fn=set)
+    return v.get_or_set('=|EIR|', value_fn=Variables).get_or_set(ext_name, value_fn=set)
 
 
 def _multi_ext_options(ext_name: str, v: Variables = None) -> dict[str, list[Any]]:
     # EOR = Extension Options Registry
-    return v.get_or_set('=|EOR|', default_fn=Variables).get_or_set(ext_name, default_fn=dict)
+    return v.get_or_set('=|EOR|', value_fn=Variables).get_or_set(ext_name, value_fn=dict)
 
 
 def _find_plugin_for_single_ext(ext_name: str, v: Variables = None):
@@ -111,7 +111,7 @@ def _init_plugin(name, v: Variables = None, _requested_by=None, _now=False):
         er[ext_name] = result = (plugin, value)
     if is_multi:
         _multi_ext_options(ext_name, v)[name] = list(result)  # list so that it's mutable later!
-    pr.get_or_set('=|STARTUP_ORDER|', default_fn=list).append(plugin)
+    pr.get_or_set('=|STARTUP_ORDER|', value_fn=list).append(plugin)
 
     return result
 
@@ -123,7 +123,7 @@ def shutdown_all_plugins(v: Variables = None):
     pr = _plugin_registry(v)
     er = _impl_registry(v)
     logger = get_logger(v)
-    for plugin in reversed(pr.get_or_set('=|STARTUP_ORDER|', default_fn=list)):  # type: Plugin
+    for plugin in reversed(pr.get_or_set('=|STARTUP_ORDER|', value_fn=list)):  # type: Plugin
         if plugin.initialized:
             name = plugin.name()
             ext_name = plugin.extension_point_name(v)
