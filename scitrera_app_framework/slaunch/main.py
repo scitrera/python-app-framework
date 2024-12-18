@@ -205,8 +205,9 @@ def get_manifest(libs=False, name=None, version=None, src=None):
         return manifest
     except (IOError, OSError) as e:
         if src is None:
-            get_logger().debug('Unable to reach central repo, switching to local data, libs=%s, name=%s, version=%s', libs, name, version)
-            return get_manifest(src=working_path / DATA)
+            get_logger().debug('Unable to reach central repo, switching to local data, libs=%s, name=%s, version=%s',
+                               libs, name, version)
+            return get_manifest(libs=libs, name=name, version=version, src=working_path / DATA)
 
     return None
 
