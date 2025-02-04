@@ -14,6 +14,7 @@ from .base_plugins import (
     EXT_BACKGROUND_EXEC, get_background_exec,
     EXT_PROGRESS_TRACKER, get_progress_tracker,
 )
+from .core.util import add_env_file_source
 
 
 def init_framework(*args, **kwargs) -> Variables:

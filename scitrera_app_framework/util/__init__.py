@@ -1,3 +1,4 @@
+# internal note: the util package should all contain useful/required utilities that have no dependencies on API or CORE
 from .misc import (
     no_op, now_ms
 )

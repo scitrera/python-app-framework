@@ -145,8 +145,8 @@ class Variables(object):
         """
         This is the equivalent function to `import_from_env_by_prefix` except that it takes a dict source rather than falling back
         to environment values. This function internally works by configuring the values in the given source dict as the fallback
-        defaults rather than setting the values directly--so it does effectively set the values... however, environment variables
-        would still act to override these values! (TODO: is this the desired functionality?)
+        defaults rather than setting the values directly--so it does effectively set the values if not set otherwise... however,
+        environment variables would still act to override these values!
 
         :param prefix: the key prefix to base our search.
         :param source: a source dict from which to pull values. If empty or None, then this function just passes through to `get_by_prefix`.

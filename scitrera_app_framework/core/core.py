@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Iterable
+from typing import Iterable, Optional, Tuple
 
 import os
 import faulthandler
@@ -34,7 +34,7 @@ def _get_default_vars_instance():
     return _default_vars_inst
 
 
-def get_variables(v: Variables = None):
+def get_variables(v: Variables = None) -> Variables:
     """
     Function to "filter" a reference to a Variables object such that if a Variables object instance
     is NOT provided then the default instance will be returned instead.
@@ -225,7 +225,7 @@ def is_stateful_ready(v: Variables):
     return None
 
 
-def load_strategy(v: Variables, parent_type, prefix='STRATEGY', drop_prefix=True):
+def load_strategy(v: Variables, parent_type, prefix='STRATEGY', drop_prefix=True) -> Tuple[Optional[object], dict]:
     """
     This function will import a python type and return all environment variables that have the same prefix as
     "xxx_type" where xxx is the prefix. So if you want to load `hello_world_widget_factory` and get configuration
@@ -268,7 +268,7 @@ def load_strategy(v: Variables, parent_type, prefix='STRATEGY', drop_prefix=True
     return strategy, strategy_kwargs
 
 
-def get_working_path(v: Variables = None, default='.', env_key='DATA_WORKING_PATH'):
+def get_working_path(v: Variables = None, default='.', env_key='DATA_WORKING_PATH') -> str:
     """
     Opinionated function to get working path;
     resolution order:
