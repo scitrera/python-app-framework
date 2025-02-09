@@ -260,9 +260,10 @@ def load_strategy(v: Variables, parent_type, prefix='STRATEGY', drop_prefix=True
     strategy_type_name = strategy_kwargs.pop('type', None)  # type: str|None
 
     try:
-        strategy = get_python_type_by_name(strategy_type_name, parent_type)
+        strategy = None if strategy_type_name is None else get_python_type_by_name(strategy_type_name, parent_type)
     except (ImportError, AttributeError, TypeError, ValueError) as e:
-        get_logger(v).error('unable to load strategy "%s": %s: %s', strategy_type_name, e.__class__.__name__, e)
+        get_logger(v).error('unable to load strategy "%s" with prefix "%s": %s: %s',
+                            strategy_type_name, prefix, e.__class__.__name__, e)
         strategy = None
 
     return strategy, strategy_kwargs
