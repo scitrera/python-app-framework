@@ -85,7 +85,8 @@ def ensure_mc3():
     logger.info('Installing MC3')
     specific_mc3_args = [s.format(path=working_path / MC3) for s in mc3_install_args]
     logger.debug(f'args: %s', specific_mc3_args)
-    subprocess.run(specific_mc3_args, cwd=working_path, check=True, shell=True)
+    # TODO: review shell usage and try to eliminate using shell for all operating systems
+    subprocess.run(specific_mc3_args, cwd=working_path, check=True, shell=CURRENT_OS != 'darwin')
 
     # remove mc3 installer
     remove(working_path / mc3_installer_save_path)
@@ -128,7 +129,7 @@ def run_python(env_name, *args, cwd=None, env=None, _pythonw=False, _shell=False
     elif _separate and CURRENT_OS == 'windows':
         sp['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
         fn = subprocess.Popen
-    else:
+    else:  # TODO: review darwin/OSX _separate (see if we need to add it at all...)
         fn = subprocess.run
     return fn([full_exe_path] + list(args), **sp)
 
