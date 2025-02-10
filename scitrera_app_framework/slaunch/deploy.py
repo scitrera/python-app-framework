@@ -40,7 +40,7 @@ def read_lib_version(lib_path: pathlib.Path, lib_name: str):
     os = operating_system()
     if os == 'windows' and (pyd_files := list(lib_path.glob('*.pyd'))):  # TODO: potential matching w/ py version too?
         v_file = pyd_files[0].name
-    elif os == 'linux' and (so_files := list(lib_path.glob('*.so'))):
+    elif (os == 'linux' or os == 'darwin') and (so_files := list(lib_path.glob('*.so'))):
         v_file = so_files[0].name
     elif (lib_path / '__init__.py').exists():
         v_file = '__init__.py'
