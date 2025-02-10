@@ -1,4 +1,5 @@
 import pathlib
+import platform
 import subprocess
 import sys
 
@@ -25,6 +26,15 @@ if CURRENT_OS == 'windows':
 elif CURRENT_OS == 'linux':
     shell_dl = ['/bin/wget', '{in_url}', '-O', '{out_file}']
     mc3_download_url = 'https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh'
+    mc3_installer_save_path = './miniconda.sh'
+    mc3_install_args = ['/bin/bash', mc3_installer_save_path] + ['-b', '-u', '-p', '{path}']
+    mc3_conda_exec = osp.join('condabin', 'conda')
+    python_exe = 'bin/python'
+    pythonw_exe = 'bin/pythonw'
+elif CURRENT_OS == 'darwin':
+    shell_dl = ['/usr/bin/curl', '{in_url}', '-o', '{out_file}']
+    arch = platform.machine()  # expected to be x86_64 or arm64
+    mc3_download_url = f'https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-{arch}.sh'
     mc3_installer_save_path = './miniconda.sh'
     mc3_install_args = ['/bin/bash', mc3_installer_save_path] + ['-b', '-u', '-p', '{path}']
     mc3_conda_exec = osp.join('condabin', 'conda')
