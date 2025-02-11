@@ -46,6 +46,7 @@ else:
 APP_NAME = 'slaunch'
 REPOSITORY_PATH = pathlib.Path(environ.get('SLAUNCH_REPOSITORY_PATH', '/slaunch_repo'))
 NATIVE_COPY = False
+SET_DYNAMIC_LIB_ENV_VARS = True
 
 
 def _env_def_args(name: str, src=None):
@@ -365,11 +366,16 @@ def launch_app(name: str, *args, apps_manifest: dict, libs_manifest: dict,
     # TODO: maybe checksum verification?
 
     env = environ.copy()
+    ld_paths = [str(local_app_path), str(local_app_path / 'libs')] + library_import_paths
     env['PYTHONPATH'] = osp.pathsep.join(
         [env.get('PYTHONPATH', '')] +  # prioritize externally provided PYTHONPATH (e.g. from IDE) above built-in libs
-        [str(local_app_path), str(local_app_path / 'libs')] +
-        library_import_paths
+        ld_paths  # followed by possible dynamic library paths
     )
+    # library paths plus include externally provided LD_LIBRARY_PATH (e.g. from user shell)
+    if SET_DYNAMIC_LIB_ENV_VARS and CURRENT_OS == 'linux':
+        env['LD_LIBRARY_PATH'] = osp.pathsep.join(ld_paths + [env.get('LD_LIBRARY_PATH', '')])
+    elif SET_DYNAMIC_LIB_ENV_VARS and CURRENT_OS == 'darwin':
+        env['DYLD_LIBRARY_PATH'] = osp.pathsep.join(ld_paths + [env.get('DYLD_LIBRARY_PATH', '')])
 
     # spawn separate process for desired code using current directory, passing arguments, and app/lib config
     logger.info('Launching %s v%s', name, version)
