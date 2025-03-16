@@ -26,7 +26,7 @@ _VAR_MAIN_LOGGER = '=|main_logger|'
 _VAR_PARAM_MAP = '=|PARAM_MAP|'
 
 
-def _get_default_vars_instance():
+def _get_default_vars_instance() -> Variables:
     """ Internal function to get/initialize the default variables instance. """
     global _default_vars_inst
     if _default_vars_inst is None:
@@ -116,7 +116,7 @@ def get_logger(v: Variables = None, logger=None, name=None) -> logging.Logger:
     return logger
 
 
-def _init_logging(logger_name, level='INFO', formatter=None, stream=sys.stderr):
+def _init_logging(logger_name, level='INFO', formatter=None, stream=sys.stderr) -> logging.Logger:
     """ Internal function to initialize logging """
     log_level = logging.getLevelName(level.upper())
     logging.root.setLevel(log_level)
