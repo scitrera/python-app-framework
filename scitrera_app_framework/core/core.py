@@ -26,6 +26,11 @@ _VAR_MAIN_LOGGER = '=|main_logger|'
 _VAR_PARAM_MAP = '=|PARAM_MAP|'
 
 
+class _SAFStreamHandler(logging.StreamHandler):
+    """Custom StreamHandler created by the framework."""
+    pass
+
+
 def _get_default_vars_instance() -> Variables:
     """ Internal function to get/initialize the default variables instance. """
     global _default_vars_inst
@@ -116,23 +121,6 @@ def get_logger(v: Variables = None, logger=None, name=None) -> logging.Logger:
     return logger
 
 
-def _init_logging(logger_name, level='INFO', formatter=None, stream=sys.stderr) -> logging.Logger:
-    """ Internal function to initialize logging """
-    log_level = logging.getLevelName(level.upper())
-    logging.root.setLevel(log_level)
-    # TODO: logging.root manipulation makes sense for container init scenario but not when multiple environments allowed
-    logging.root.handlers.clear()
-    if stream is not None:
-        handler = logging.StreamHandler(stream=stream)
-        if formatter is not None:
-            handler.setFormatter(formatter)
-        handler.setLevel(log_level)  # configure handler to use given level
-        logging.root.addHandler(handler)  # TODO: handler should be added to the root logger for the environment/Variables instance
-
-    logger = logging.getLogger(logger_name)
-    return logger
-
-
 def _log_fmt_json(**static_fields):
     """ Internal function to create formatter instance for JSON logs """
     try:
@@ -170,6 +158,42 @@ def _log_fmt_json(**static_fields):
         )
     except ImportError:
         return None
+
+
+def _init_logging(logger_name, level='INFO', formatter=None, stream=sys.stderr) -> logging.Logger:
+    """ Internal function to initialize logging """
+    log_level = logging.getLevelName(level.upper())
+    root_logger = logging.root
+    root_logger.setLevel(log_level)
+
+    # check if a framework-created handler is already present on the root logger.
+    root_already_initialized = any(isinstance(h, _SAFStreamHandler) for h in root_logger.handlers)
+
+    # if first time initialization: clear the default handlers and add our custom handler
+    if not root_already_initialized and stream is not None:
+        root_logger.handlers.clear()
+        # noinspection PyTypeChecker
+        handler = _SAFStreamHandler(stream=stream)
+        if formatter is not None:
+            handler.setFormatter(formatter)
+        handler.setLevel(log_level)
+        root_logger.addHandler(handler)
+
+    # return base logger for framework
+    logger = logging.getLogger(logger_name)
+    return logger
+
+
+def _set_root_logging_level(level='INFO'):
+    log_level = logging.getLevelName(level.upper())
+    root_logger = logging.root
+    root_logger.setLevel(log_level)
+    for handler in root_logger.handlers:
+        if isinstance(handler, _SAFStreamHandler):
+            handler.setLevel(log_level)
+            return  # job done
+
+    raise ValueError('cannot set root logging level before initialization')
 
 
 def _init_stateful_root(v: Variables, local_name=None, default_stateful_root='./scratch',
