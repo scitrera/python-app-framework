@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from enum import Enum
 from os import environ
 from typing import Callable, Any, Set
 
@@ -20,30 +21,61 @@ NO_MATCH = object()
 NOT_SET = NO_MATCH
 
 
+class EnvPlacement(Enum):
+    TOP = 1
+    BOTTOM = 2
+    IGNORED = 3
+
+
 class Variables(object):
     _local = None
-    _env_defaults = None
+    _fallback_defaults = None
     _type_fns = None
     _sources = None
 
-    def __init__(self, sources=()):
+    def __init__(self, sources=(), env_placement: EnvPlacement = EnvPlacement.TOP, local_provider=dict):
         """
         Instantiate a Variables instance to act as the centerpiece of coordinating application
         components. Realistically, this should be called "Environment" or something, but way-back-when,
         it was called Variables to act as a container for environment variables plus--and that stuck.
 
         :param sources: optional iterable of sources to search for variables (i.e., for a multi-tier key-value store)
+        :param env_placement: additional option to de-prioritize environment variables. For most use-cases, the default of
+                              env_placement makes the most sense; however, for the multi-tenant application configuration
+                              use case, it's actually convenient to de-prioritize or ignore environment variables. This option
+                              opens up the door to alternative, creative uses of Variables while keeping the same API.
+        :param local_provider: no-arg function/callable that returns a dict or dict-like object that is used for storing local
+                               configuration. this was added to facilitate creative use cases that require committing / saving
+                               local values and/or remote solutions for authoritative values. The default is a dict and should
+                               be suitable for most/simple use cases.
         """
-        self._local = {}  # type: dict[str, Any]
-        self._env_defaults = {}  # type: dict[str, Any]
+        self._local = local_provider()  # type: dict[str, Any]
+        self._fallback_defaults = {}  # type: dict[str, Any]
         self._type_fns = {}  # type: dict[str, Callable]
         self._keys = set()  # type: set[str]
-        self._sources = (
-                [_environment,  # we prioritize env variables
-                 self._local,  # then we fall back to local settings to act as configurable defaults
-                 ] + list(sources) +  # then given other sources
-                [self._env_defaults, ]  # falling back to general defaults
-        )
+        if env_placement == EnvPlacement.TOP:
+            self._sources = (
+                    [_environment,  # we prioritize env variables
+                     self._local,  # then we fall back to local settings to act as configurable defaults
+                     ] + list(sources) +  # then given other sources
+                    [self._fallback_defaults, ]  # falling back to general defaults
+            )
+        elif env_placement == EnvPlacement.BOTTOM:
+            self._sources = (
+                    [self._local,  # local settings to act as configurable overrides
+                     ] + list(sources) +  # then given other sources
+                    [self._fallback_defaults,  # falling back to general defaults
+                     _environment, ]  # and then env variables as an emergency backup
+
+            )
+        elif env_placement == EnvPlacement.IGNORED:
+            self._sources = (
+                    [self._local,  # local settings to act as configurable overrides
+                     ] + list(sources) +  # then given other sources
+                    [self._fallback_defaults, ]  # falling back to general defaults
+            )
+        else:
+            raise ValueError(f'invalid value for env_placement: {env_placement}')
 
     def environ(self, key: str, default: Any = NOT_SET, type_fn: Callable = None):
         """
@@ -61,7 +93,7 @@ class Variables(object):
         :return: the value or default if key is otherwise not defined anywhere in the available sources
         """
         if default is not NOT_SET:  # use NO_MATCH/NOT_SET to allow None as a default value
-            self._env_defaults[key] = default
+            self._fallback_defaults[key] = default
         if type_fn is not None:
             self._type_fns[key] = type_fn
 
@@ -211,7 +243,7 @@ class Variables(object):
         :param key: the key or environment variable name for which you wish to define a default value
         :param default: the default value to use if key is otherwise not defined anywhere in the available sources
         """
-        self._env_defaults[key] = default
+        self._fallback_defaults[key] = default
         return
 
     def set_type_default(self, key: str, default: Any = NOT_SET, type_fn: Callable = NOT_SET):
@@ -224,7 +256,7 @@ class Variables(object):
         :param type_fn: a type function that takes the raw value/environment value string as an input and coerces it to the correct type
         """
         if default is not NOT_SET:
-            self._env_defaults[key] = default
+            self._fallback_defaults[key] = default
         if type_fn is not NOT_SET:
             self._type_fns[key] = type_fn
         return
@@ -258,7 +290,7 @@ class Variables(object):
         return
 
     def __contains__(self, key: str) -> bool:
-        return key in self._keys or key in _environment
+        return key in self._keys or key in _environment  # TODO: __contains__ should adjust if env_placement is IGNORED!
 
     def keys(self) -> Set[str]:
         """ Get a copy of the identified keys in this Variables instance. """
@@ -292,7 +324,7 @@ class Variables(object):
         :param value_fn: a no-arg function that will be called to provide a value if the key is not found
         :return: the value of the DEFAULT key (either because it already existed or because we set it to a new value)
         """
-        mapping = self._env_defaults
+        mapping = self._fallback_defaults
         if key in mapping:
             return mapping[key]
         mapping[key] = result = value_fn()
