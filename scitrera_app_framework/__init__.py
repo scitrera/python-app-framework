@@ -18,7 +18,7 @@ from .core.util import add_env_file_source
 
 
 def init_framework(*args, **kwargs) -> Variables:
-    register_base_plugins = kwargs.pop('base_plugins', True)
+    register_base_plugins = kwargs.pop('base_plugins', False)
     enable_pyroscope = kwargs.pop('pyroscope', False)
 
     v = _init_framework(*args, **kwargs)
