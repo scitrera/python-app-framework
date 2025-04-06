@@ -37,6 +37,11 @@ def init_framework(*args, **kwargs) -> Variables:
     from .core.plugins import shutdown_all_plugins
     register_shutdown_function(shutdown_all_plugins, v)
 
+    # facilitate multitenant init as kwarg and/or environment variable (with typical env variable taking precedence)
+    if v.environ('SAF_MULTITENANT_ENABLED', default=kwargs.pop('multitenant', False), type_fn=ext_parse_bool):
+        from .ext_plugins.muti_tenant import MultiTenantPlugin
+        register_plugin(MultiTenantPlugin, v, init=True)
+
     return v
 
 

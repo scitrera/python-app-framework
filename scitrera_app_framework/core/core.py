@@ -25,6 +25,8 @@ _VAR_APP_STATEFUL_READY = '=|app_state_ready|'
 _VAR_MAIN_LOGGER = '=|main_logger|'
 _VAR_PARAM_MAP = '=|PARAM_MAP|'
 
+ENV_LOGGING_LEVEL = 'LOGGING_LEVEL'
+
 
 class _SAFStreamHandler(logging.StreamHandler):
     """Custom StreamHandler created by the framework."""
@@ -379,7 +381,7 @@ def init_framework(base_app_name: str,
         # TODO: mechanism to set stream
         logger = v.set(_VAR_MAIN_LOGGER, _init_logging(
             app_name,
-            level=v.environ('LOGGING_LEVEL', default=log_level),
+            level=v.environ(ENV_LOGGING_LEVEL, default=log_level),
             formatter=fmt
         ))
         if build_container_version != 'DEV':
