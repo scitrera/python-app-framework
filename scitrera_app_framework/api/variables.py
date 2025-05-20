@@ -119,9 +119,11 @@ class Variables(object):
             match = self._local.get(key, NO_MATCH)
         else:
             for source in self._sources:
-                if key in source:
+                try:
                     match = source[key]
                     break
+                except KeyError:
+                    pass
 
         if match is not NO_MATCH:
             # if key not in self._keys:  # TODO: should any item that we retrieve should be considered part of us?
