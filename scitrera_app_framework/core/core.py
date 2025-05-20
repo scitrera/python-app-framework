@@ -468,3 +468,17 @@ def log_framework_variables(v: Variables = None, prefixes: str | Iterable[str] =
 def go_sigterm_yourself():
     # Send SIGTERM signal to the own process
     os.kill(os.getpid(), signal.SIGTERM)
+
+
+def is_epp(key: str) -> bool:
+    """
+    Determine if a given variable key is an "epp" (equal pipe...pipe) variable. This
+    function is meant to be useful for writing specific functionality in the future and
+    being able to detect variables that are internal to SAF.
+
+    :param key: the variable key to test
+    :return: whether the given key is an =|| (epp) variable [internal to SAF]
+    """
+    if not isinstance(key, str) or len(key) < 4:
+        return False
+    return key.startswith('=|') and key.endswith('|')
