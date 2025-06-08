@@ -5,6 +5,20 @@ from os import environ
 from typing import Callable, Any, Set
 
 
+def is_epp(key: str) -> bool:
+    """
+    Determine if a given variable key is an "epp" (equal pipe...pipe) variable. This
+    function is meant to be useful for writing specific functionality in the future and
+    being able to detect variables that are internal to SAF.
+
+    :param key: the variable key to test
+    :return: whether the given key is an =|| (epp) variable [internal to SAF]
+    """
+    if not isinstance(key, str) or len(key) < 4:
+        return False
+    return key.startswith('=|') and key.endswith('|')
+
+
 class EnvironProxy(object):
 
     def __getitem__(self, item: str):
@@ -346,10 +360,14 @@ class Variables(object):
         self._sources.insert(len(self._sources) - 1, src)
         return
 
-    def export_all_variables(self) -> dict[str, Any]:
+    def export_all_variables(self, exclude_epp: bool = True) -> dict[str, Any]:
         """
-        Export all identified/declared keys from this instance to a dict
+        Export all identified/declared keys from this instance to a dict.
+
+        :param: exclude_epp: whether to exclude epp (internal) keys; default is True.
         """
+        if exclude_epp:
+            return {k: self.__getitem__(k) for k in self._keys if not is_epp(k)}
         return {k: self.__getitem__(k) for k in self._keys}
 
     pass
