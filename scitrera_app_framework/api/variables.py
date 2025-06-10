@@ -70,22 +70,22 @@ class Variables(object):
         if env_placement == EnvPlacement.TOP:
             self._sources = (
                     [_environment,  # we prioritize env variables
-                     self._local,  # then we fall back to local settings to act as configurable defaults
-                     ] + list(sources) +  # then given other sources
+                     self._absorb_keys(self._local),  # then we fall back to local settings to act as configurable defaults
+                     ] + [self._absorb_keys(s) for s in sources] +  # then given other sources
                     [self._fallback_defaults, ]  # falling back to general defaults
             )
         elif env_placement == EnvPlacement.BOTTOM:
             self._sources = (
-                    [self._local,  # local settings to act as configurable overrides
-                     ] + list(sources) +  # then given other sources
+                    [self._absorb_keys(self._local),  # local settings to act as configurable overrides
+                     ] + [self._absorb_keys(s) for s in sources] +  # then given other sources
                     [self._fallback_defaults,  # falling back to general defaults
                      _environment, ]  # and then env variables as an emergency backup
 
             )
         elif env_placement == EnvPlacement.IGNORED:
             self._sources = (
-                    [self._local,  # local settings to act as configurable overrides
-                     ] + list(sources) +  # then given other sources
+                    [self._absorb_keys(self._local),  # local settings to act as configurable overrides
+                     ] + [self._absorb_keys(s) for s in sources] +  # then given other sources
                     [self._fallback_defaults, ]  # falling back to general defaults
             )
         else:
@@ -140,8 +140,7 @@ class Variables(object):
                     pass
 
         if match is not NO_MATCH:
-            # if key not in self._keys:  # TODO: should any item that we retrieve should be considered part of us?
-            #     self._keys.add(key)
+            self._keys.add(key)  # TODO: should any item that we retrieve should be considered part of us?
             type_fn = self._type_fns.get(key, None)
             if type_fn is not None:
                 return type_fn(match)
@@ -346,6 +345,18 @@ class Variables(object):
         mapping[key] = result = value_fn()
         return result
 
+    def _absorb_keys(self, src: dict):
+        # try to integrate keys if the source provides keys
+        try:
+            keys_fn = getattr(src, 'keys', None)
+            if callable(keys_fn):
+                # noinspection PyTypeChecker
+                self._keys.update(keys_fn())
+        except (TypeError, AttributeError):
+            pass
+
+        return src
+
     def add_source(self, src: "Variables" | dict):
         """
         Add another source for possible key-value pair matches to this Variables instance. `src` is expected
@@ -357,7 +368,7 @@ class Variables(object):
         :param src: the additional source to search.
         """
         # add new sources to the end of the list but before env_defaults fallback
-        self._sources.insert(len(self._sources) - 1, src)
+        self._sources.insert(len(self._sources) - 1, self._absorb_keys(src))
         return
 
     def export_all_variables(self, exclude_epp: bool = True) -> dict[str, Any]:

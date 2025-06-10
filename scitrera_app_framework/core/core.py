@@ -218,7 +218,7 @@ def _init_stateful_root(v: Variables, local_name=None, default_stateful_root='./
     # setup working directory for application state if available
     state_root = v.environ('STATEFUL_ROOT', default=default_stateful_root)
     if not osp.exists(state_root):
-        logger.info('state_root "%s" does not exist. aborting stateful setup', state_root)
+        logger.debug('state_root "%s" does not exist. aborting stateful setup', state_root)
         return
 
     # use run_id and run_serial with local_name to determine path
