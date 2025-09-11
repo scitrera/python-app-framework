@@ -39,6 +39,7 @@ class EnvPlacement(Enum):
     TOP = 1
     BOTTOM = 2
     IGNORED = 3
+    BOTTOM2 = 4  # 2nd from bottom (above fall back defaults but otherwise last)
 
 
 class Variables(object):
@@ -46,6 +47,7 @@ class Variables(object):
     _fallback_defaults = None
     _type_fns = None
     _sources = None
+    _bottom_offset = 1
 
     def __init__(self, sources=(), env_placement: EnvPlacement = EnvPlacement.TOP, local_provider=dict):
         """
@@ -82,6 +84,16 @@ class Variables(object):
                      _environment, ]  # and then env variables as an emergency backup
 
             )
+            self._bottom_offset = 2
+        elif env_placement == EnvPlacement.BOTTOM2:
+            self._sources = (
+                    [self._absorb_keys(self._local),  # local settings to act as configurable overrides
+                     ] + [self._absorb_keys(s) for s in sources] +  # then given other sources
+                    [_environment,  # falling back to env variables
+                     self._fallback_defaults, ]  # and then general defaults as an emergency backup
+
+            )
+            self._bottom_offset = 2
         elif env_placement == EnvPlacement.IGNORED:
             self._sources = (
                     [self._absorb_keys(self._local),  # local settings to act as configurable overrides
@@ -368,7 +380,7 @@ class Variables(object):
         :param src: the additional source to search.
         """
         # add new sources to the end of the list but before env_defaults fallback
-        self._sources.insert(len(self._sources) - 1, self._absorb_keys(src))
+        self._sources.insert(len(self._sources) - self._bottom_offset, self._absorb_keys(src))
         return
 
     def export_all_variables(self, exclude_epp: bool = True) -> dict[str, Any]:
