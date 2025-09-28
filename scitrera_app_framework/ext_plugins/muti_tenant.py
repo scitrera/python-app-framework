@@ -101,7 +101,7 @@ class MultiTenantPlugin(Plugin):
         return EXT_MULTITENANT
 
     def initialize(self, v: Variables, logger: Logger) -> object | None:
-        logger.info('Initializing Multi-Tenant Support')
+        logger.debug('Initializing Multi-Tenant Support')
 
         provider = get_python_type_by_name(
             type_name=v.environ(ENV_MULTITENANT_PROVIDER, default=DEFAULT_MULTI_TENANT_PROVIDER),
