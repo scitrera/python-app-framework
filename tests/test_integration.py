@@ -266,7 +266,7 @@ class TestMultiTenantIntegration:
 
     def test_multitenant_isolation(self, clean_env):
         from scitrera_app_framework import init_framework, get_logger
-        from scitrera_app_framework.ext_plugins.muti_tenant import get_tenant_variables
+        from scitrera_app_framework.ext_plugins.multi_tenant import get_tenant_variables
 
         v = init_framework(
             "multi-tenant-app",
@@ -297,7 +297,7 @@ class TestMultiTenantIntegration:
 
     def test_multitenant_with_base_plugins(self, clean_env):
         from scitrera_app_framework import init_framework
-        from scitrera_app_framework.ext_plugins.muti_tenant import get_tenant_variables
+        from scitrera_app_framework.ext_plugins.multi_tenant import get_tenant_variables
         from scitrera_app_framework.base_plugins import get_background_exec
 
         v = init_framework(

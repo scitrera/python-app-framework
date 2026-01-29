@@ -10,6 +10,98 @@ from unittest.mock import patch, MagicMock
 from scitrera_app_framework.api import Variables
 
 
+class TestInitFrameworkIdempotent:
+    """Tests for init_framework idempotent behavior (duplicate initialization detection)."""
+
+    def test_init_framework_returns_same_instance_on_reinit(self, clean_env):
+        """Calling init_framework twice with same Variables returns the same instance."""
+        from scitrera_app_framework import init_framework
+
+        v1 = init_framework("test-app", shutdown_hooks=False, stateful=False)
+        v2 = init_framework("test-app-2", shutdown_hooks=False, stateful=False)
+
+        # Should return the same instance (default Variables singleton)
+        assert v1 is v2
+
+    def test_init_framework_does_not_reinitialize(self, clean_env, capture_logs):
+        """Second init_framework call should not reconfigure logging or change app name."""
+        from scitrera_app_framework import init_framework, get_logger
+
+        v1 = init_framework("app-first", shutdown_hooks=False, stateful=False)
+        original_app_name = v1.get("APP_NAME")
+        logger = get_logger(v1)
+        logger.addHandler(capture_logs)
+
+        # Second call with different app name
+        v2 = init_framework("app-second", shutdown_hooks=False, stateful=False)
+
+        # APP_NAME should remain the original (not overwritten)
+        assert v2.get("APP_NAME") == original_app_name
+        assert v2.get("APP_NAME") == "app-first"
+
+        # No "Initializing" log message should appear for second call
+        init_messages = [m for m in capture_logs.get_messages() if "Initializing" in m]
+        assert len(init_messages) == 0  # capture_logs was added after first init
+
+    def test_init_framework_explicit_variables_instance_idempotent(self, clean_env):
+        """Passing an explicit Variables instance respects idempotent behavior."""
+        from scitrera_app_framework import init_framework
+        from scitrera_app_framework.api import Variables
+
+        v = Variables()
+
+        v1 = init_framework("app-first", shutdown_hooks=False, stateful=False, v=v)
+        v2 = init_framework("app-second", shutdown_hooks=False, stateful=False, v=v)
+
+        assert v1 is v
+        assert v2 is v
+        assert v.get("APP_NAME") == "app-first"
+
+    def test_init_framework_separate_instances_initialize_independently(self, clean_env):
+        """Different Variables instances can be initialized separately."""
+        from scitrera_app_framework import init_framework
+        from scitrera_app_framework.api import Variables
+
+        v1 = Variables()
+        v2 = Variables()
+
+        result1 = init_framework("app-one", shutdown_hooks=False, stateful=False, v=v1)
+        result2 = init_framework("app-two", shutdown_hooks=False, stateful=False, v=v2)
+
+        assert result1 is v1
+        assert result2 is v2
+        assert v1.get("APP_NAME") == "app-one"
+        assert v2.get("APP_NAME") == "app-two"
+
+    def test_init_framework_idempotent_preserves_param_map(self, clean_env):
+        """Second init call does not overwrite _VAR_PARAM_MAP from first call."""
+        from scitrera_app_framework import init_framework
+        from scitrera_app_framework.core.core import _VAR_PARAM_MAP
+
+        v1 = init_framework(
+            "app-first",
+            shutdown_hooks=False,
+            stateful=False,
+            worker_id=1,
+            region="us-east"
+        )
+        original_param_map = v1.get(_VAR_PARAM_MAP)
+
+        # Second call with different params
+        v2 = init_framework(
+            "app-second",
+            shutdown_hooks=False,
+            stateful=False,
+            worker_id=99,
+            region="eu-west"
+        )
+
+        # Param map should be unchanged
+        assert v2.get(_VAR_PARAM_MAP) is original_param_map
+        assert v2.get(_VAR_PARAM_MAP)["worker_id"] == 1
+        assert v2.get(_VAR_PARAM_MAP)["region"] == "us-east"
+
+
 class TestInitFramework:
     """Tests for init_framework and related functions."""
 

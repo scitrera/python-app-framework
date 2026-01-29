@@ -349,6 +349,10 @@ def init_framework(base_app_name: str,
     if v is None:
         v = _get_default_vars_instance()
 
+    # check that v isn't already initialized; if it's already initialized -- then we can short-circuit and return v
+    if _VAR_MAIN_LOGGER in v:
+        return v  # already initialized
+
     # normalize parameters map w/ environment fallback values
     param_map = v.set(_VAR_PARAM_MAP, {k.lower(): v.environ(k.upper(), default=val) for k, val in params.items()})
 

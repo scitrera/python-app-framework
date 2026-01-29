@@ -11,7 +11,7 @@ if __name__ == '__main__':
     # v.set(ENV_MULTITENANT_ENABLED, True)
     # register_plugin(MultiTenantPlugin, v=v, init=True)
 
-    from scitrera_app_framework.ext_plugins.muti_tenant import get_tenant_variables
+    from scitrera_app_framework.ext_plugins.multi_tenant import get_tenant_variables
 
     t1 = get_tenant_variables('tenant1', v=v)
     l1 = get_logger(t1)

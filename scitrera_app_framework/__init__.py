@@ -39,7 +39,7 @@ def init_framework(*args, **kwargs) -> Variables:
 
     # facilitate multitenant init as kwarg and/or environment variable (with typical env variable taking precedence)
     if v.environ('SAF_MULTITENANT_ENABLED', default=kwargs.pop('multitenant', False), type_fn=ext_parse_bool):
-        from .ext_plugins.muti_tenant import MultiTenantPlugin
+        from .ext_plugins.multi_tenant import MultiTenantPlugin
         register_plugin(MultiTenantPlugin, v, init=True)
 
     return v

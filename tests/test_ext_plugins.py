@@ -14,7 +14,7 @@ class TestMultiTenantPlugin:
     def test_multitenant_disabled_by_default(self, clean_env):
         from scitrera_app_framework import init_framework
         from scitrera_app_framework.core.plugins import get_extension
-        from scitrera_app_framework.ext_plugins.muti_tenant import EXT_MULTITENANT
+        from scitrera_app_framework.ext_plugins.multi_tenant import EXT_MULTITENANT
 
         v = init_framework("test-app", shutdown_hooks=False, stateful=False)
 
@@ -24,7 +24,7 @@ class TestMultiTenantPlugin:
 
     def test_multitenant_enabled_via_kwarg(self, clean_env):
         from scitrera_app_framework import init_framework
-        from scitrera_app_framework.ext_plugins.muti_tenant import (
+        from scitrera_app_framework.ext_plugins.multi_tenant import (
             get_tenant_provider, BaseMultiTenantProvider
         )
 
@@ -44,7 +44,7 @@ class TestMultiTenantPlugin:
 
         try:
             from scitrera_app_framework import init_framework
-            from scitrera_app_framework.ext_plugins.muti_tenant import get_tenant_provider
+            from scitrera_app_framework.ext_plugins.multi_tenant import get_tenant_provider
 
             v = init_framework("test-app", shutdown_hooks=False, stateful=False)
 
@@ -55,7 +55,7 @@ class TestMultiTenantPlugin:
 
     def test_get_tenant_variables(self, clean_env):
         from scitrera_app_framework import init_framework
-        from scitrera_app_framework.ext_plugins.muti_tenant import get_tenant_variables
+        from scitrera_app_framework.ext_plugins.multi_tenant import get_tenant_variables
 
         v = init_framework(
             "test-app",
@@ -71,7 +71,7 @@ class TestMultiTenantPlugin:
 
     def test_tenant_variables_isolated(self, clean_env):
         from scitrera_app_framework import init_framework
-        from scitrera_app_framework.ext_plugins.muti_tenant import get_tenant_variables
+        from scitrera_app_framework.ext_plugins.multi_tenant import get_tenant_variables
 
         v = init_framework(
             "test-app",
@@ -93,7 +93,7 @@ class TestMultiTenantPlugin:
 
     def test_tenant_variables_cached(self, clean_env):
         from scitrera_app_framework import init_framework
-        from scitrera_app_framework.ext_plugins.muti_tenant import get_tenant_variables
+        from scitrera_app_framework.ext_plugins.multi_tenant import get_tenant_variables
 
         v = init_framework(
             "test-app",
@@ -110,7 +110,7 @@ class TestMultiTenantPlugin:
 
     def test_tenant_has_logger(self, clean_env):
         from scitrera_app_framework import init_framework, get_logger
-        from scitrera_app_framework.ext_plugins.muti_tenant import get_tenant_variables
+        from scitrera_app_framework.ext_plugins.multi_tenant import get_tenant_variables
 
         v = init_framework(
             "test-app",
@@ -131,7 +131,7 @@ class TestBaseMultiTenantProvider:
 
     def test_provider_getitem(self, clean_env):
         from scitrera_app_framework import init_framework
-        from scitrera_app_framework.ext_plugins.muti_tenant import (
+        from scitrera_app_framework.ext_plugins.multi_tenant import (
             get_tenant_provider, BaseMultiTenantProvider
         )
 
@@ -150,7 +150,7 @@ class TestBaseMultiTenantProvider:
 
     def test_provider_get_method(self, clean_env):
         from scitrera_app_framework import init_framework
-        from scitrera_app_framework.ext_plugins.muti_tenant import get_tenant_provider
+        from scitrera_app_framework.ext_plugins.multi_tenant import get_tenant_provider
 
         v = init_framework(
             "test-app",
@@ -170,7 +170,7 @@ class TestCustomMultiTenantProvider:
 
     def test_custom_provider_basic(self, clean_env):
         """Test that BaseMultiTenantProvider can be subclassed and used."""
-        from scitrera_app_framework.ext_plugins.muti_tenant import BaseMultiTenantProvider
+        from scitrera_app_framework.ext_plugins.multi_tenant import BaseMultiTenantProvider
         from scitrera_app_framework import init_framework_test_harness
 
         # Create a root Variables for the provider
@@ -201,7 +201,7 @@ class TestMultiTenantEnvPlacement:
 
         try:
             from scitrera_app_framework import init_framework
-            from scitrera_app_framework.ext_plugins.muti_tenant import get_tenant_variables
+            from scitrera_app_framework.ext_plugins.multi_tenant import get_tenant_variables
 
             v = init_framework(
                 "test-app",
@@ -223,7 +223,7 @@ class TestMultiTenantEnvPlacement:
 
         try:
             from scitrera_app_framework import init_framework
-            from scitrera_app_framework.ext_plugins.muti_tenant import get_tenant_variables
+            from scitrera_app_framework.ext_plugins.multi_tenant import get_tenant_variables
 
             v = init_framework(
                 "test-app",

@@ -16,7 +16,7 @@ tools like Pyroscope.
 - Dependencies (runtime):
     - botwinick-utils (>= 0.0.20)
     - vpd
-    - python-json-logger (< 3.0.0)
+    - python-json-logger (>= 4.0.0)
 - Optional/dev dependencies:
     - python-dotenv (for loading .env files via `add_env_file_source`)
 
@@ -79,7 +79,7 @@ Multi-tenant example:
 
 ```python
 from scitrera_app_framework import init_framework, get_logger
-from scitrera_app_framework.ext_plugins.muti_tenant import get_tenant_variables
+from scitrera_app_framework.ext_plugins.multi_tenant import get_tenant_variables
 
 v = init_framework('my-app', log_level='DEBUG', multitenant=True)
 
@@ -212,24 +212,31 @@ point defined in this package.
 
 ## Kubernetes utilities (k8s.util)
 
-The module `scitrera_app_framework.k8s.util` contains small, practical helpers for working with Kubernetes objects. These are useful when building simple operators or orchestrating activities from Python in a K8s environment.
+The module `scitrera_app_framework.k8s.util` contains small, practical helpers for working with Kubernetes objects.
+These are useful when building simple operators or orchestrating activities from Python in a K8s environment.
 
 - Completely optional and separate from the core framework; nothing depends on them by default.
 - Requires the Kubernetes Python client (and uses utilities from `vpd`). Install with: `pip install kubernetes`.
 - Functions work with either plain dicts (YAML loaded) or Kubernetes client objects where noted.
 
 Highlights:
-- `apply_yaml_object(obj, verb='apply'|'get'|'replace')`: Apply/get/replace a K8s object (TODO: describe server-side vs client-side apply).
+
+- `apply_yaml_object(obj, verb='apply'|'get'|'replace')`: Apply/get/replace a K8s object (TODO: describe server-side vs
+  client-side apply).
 - `parse_yaml(path_or_text)`: Parse YAML into Python objects (dicts). Handy for loading manifests.
-- `start_pod(pod_def, wait=True, replace=False, wait_delay=0.25, wait_until_terminated=False)`: Create or replace a Pod and optionally wait until Running (or Terminated).
+- `start_pod(pod_def, wait=True, replace=False, wait_delay=0.25, wait_until_terminated=False)`: Create or replace a Pod
+  and optionally wait until Running (or Terminated).
 - `is_pod_running(pod_def, strict=False)`: Check if a Pod is Running (or Pending when `strict=False`).
 - `is_pod_in_terminated_state(pod_def)`: Check if a Pod finished (Succeeded or Failed).
 - `pod_exists(pod_def)`: Determine if a Pod currently exists.
-- `get_pod_env(pod_def, container_name=None, container_index=0)`: Get a reference to a container's `env` list for in-place edits.
-- `merge_env_vars(env, *complex_items, key_upper=True, **fixed_pairs)`: Merge environment variable definitions (supports complex `valueFrom` entries and simple key=value pairs). Modifies list in-place.
+- `get_pod_env(pod_def, container_name=None, container_index=0)`: Get a reference to a container's `env` list for
+  in-place edits.
+- `merge_env_vars(env, *complex_items, key_upper=True, **fixed_pairs)`: Merge environment variable definitions (supports
+  complex `valueFrom` entries and simple key=value pairs). Modifies list in-place.
 - `fixed_env_vars(**pairs)`: Build fixed env var entries from kwargs.
 - `get_metadata_name(obj)`, `get_metadata_namespace(obj)`: Extract metadata fields from dicts or client objects.
-- `get_headless_service_dns_name_for_pod(pod_def, svc_def)`: Compose the DNS name `<pod>.<service>.<namespace>.svc` for a headless Service.
+- `get_headless_service_dns_name_for_pod(pod_def, svc_def)`: Compose the DNS name `<pod>.<service>.<namespace>.svc` for
+  a headless Service.
 
 Example: launch a Pod from YAML and wait until it runs
 
@@ -248,12 +255,13 @@ from scitrera_app_framework.k8s.util import parse_yaml, get_pod_env, merge_env_v
 
 pod = parse_yaml('pod.yaml')
 env = get_pod_env(pod)
-merge_env_vars(env, { 'name': 'CONFIG_PATH', 'valueFrom': { 'configMapKeyRef': { 'name': 'my-cm', 'key': 'cfg' } } },
-                IMAGE_TAG='v1.2.3', DEBUG=True)
+merge_env_vars(env, {'name': 'CONFIG_PATH', 'valueFrom': {'configMapKeyRef': {'name': 'my-cm', 'key': 'cfg'}}},
+               IMAGE_TAG='v1.2.3', DEBUG=True)
 apply_yaml_object(pod)  # apply modified manifest
 ```
 
-Note: These helpers assume your local environment is configured to talk to a cluster (e.g., `KUBECONFIG` or in-cluster config).
+Note: These helpers assume your local environment is configured to talk to a cluster (e.g., `KUBECONFIG` or in-cluster
+config).
 
 ## Project Structure
 
@@ -263,7 +271,8 @@ Note: These helpers assume your local environment is configured to talk to a clu
     - `base_plugins/` – Built-in optional plugins (e.g., background executor)
     - `ext_plugins/` – Optional extensions (e.g., Pyroscope, Multi-tenant)
     - `k8s/` - Optional Kubernetes Utilities
-    - `slaunch/` – "slaunch" is a white-label ready set of utilities to maintain structured conda environments and applications with auto-updating on start, etc.
+    - `slaunch/` – "slaunch" is a white-label ready set of utilities to maintain structured conda environments and
+      applications with auto-updating on start, etc.
     - `util/` – Miscellaneous helpers (async, parsing, imports)
 - `setup.py` – Build configuration
 - `requirements.txt` – Development/runtime dependencies list
