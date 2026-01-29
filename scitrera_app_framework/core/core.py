@@ -199,7 +199,7 @@ def _set_root_logging_level(level='INFO'):
 
 
 def _init_stateful_root(v: Variables, local_name=None, default_stateful_root='./scratch',
-                        default_run_id=None, default_run_serial=None, default_chdir=True):
+                        default_run_id=None, default_run_serial=None, default_chdir=True, stateful_root_env_key: str = 'STATEFUL_ROOT'):
     """
     Internal function to initialize stateful root/stateful features.
 
@@ -216,7 +216,7 @@ def _init_stateful_root(v: Variables, local_name=None, default_stateful_root='./
         local_name = v.get('APP_NAME')
 
     # setup working directory for application state if available
-    state_root = v.environ('STATEFUL_ROOT', default=default_stateful_root)
+    state_root = v.environ(stateful_root_env_key, default=default_stateful_root)
     if not osp.exists(state_root):
         logger.debug('state_root "%s" does not exist. aborting stateful setup', state_root)
         return
@@ -228,7 +228,7 @@ def _init_stateful_root(v: Variables, local_name=None, default_stateful_root='./
     v.set(_VAR_APP_STATEFUL_ROOT, app_state_root)
 
     # makedirs as needed and set working directory to stateful root
-    logger.info('app stateful root=%s', app_state_root)
+    logger.debug('app stateful root=%s', app_state_root)
     makedirs(app_state_root, exist_ok=True)
     if v.environ('SAF_STATEFUL_CHDIR', default=default_chdir, type_fn=ext_parse_bool):
         chdir(app_state_root)
@@ -318,6 +318,7 @@ def init_framework(base_app_name: str,
                    fixed_logger=None, log_format=None, log_level='INFO',
                    shutdown_hooks=True, shutdown_hooks_via_atexit=True,
                    stateful=True, stateful_chdir=True, default_stateful_root='./scratch', default_run_id=None, default_serial_strategy=None,
+                   stateful_root_env_key: str = 'STATEFUL_ROOT',
                    fault_handler=True,
                    sep='-', unnamed_params=(),
                    v: Variables = None,
@@ -338,6 +339,7 @@ def init_framework(base_app_name: str,
     :param default_stateful_root: the default stateful root if not provided by env variable
     :param default_run_id: default run_id for stateful init (becomes next directory in path after stateful_root)
     :param default_serial_strategy: default strategy for generating run serial (default is None) (alternative: 'ms': use unix time in ms)
+    :param stateful_root_env_key: environment variable key to use for stateful root path (env variable will override this)
     :param fault_handler: whether the default functionality is to try to install the python fault handler (env variable will override this)
     :param sep: the default separator used when constructing a longer, more complex app name based on given parameters
     :param unnamed_params: an iterable (tuple) containing parameters that should not be included in the app name
@@ -409,7 +411,8 @@ def init_framework(base_app_name: str,
         else:
             default_serial = None
         _init_stateful_root(v, local_name=app_name, default_stateful_root=default_stateful_root,
-                            default_run_id=default_run_id, default_run_serial=default_serial, default_chdir=stateful_chdir)
+                            default_run_id=default_run_id, default_run_serial=default_serial, default_chdir=stateful_chdir,
+                            stateful_root_env_key=stateful_root_env_key)
 
     return v
 
