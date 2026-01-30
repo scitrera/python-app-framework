@@ -461,14 +461,13 @@ async def async_plugins_ready(v: Variables = None, *, capture_loop: bool = True)
             continue
 
         try:
-            value = _get_plugin_value(plugin, v)
-            coro = plugin.async_ready(v, plugin.get_logger(v), value)
-            if coro is not None and not plugin._async_ready_called:
+            if not plugin._async_ready_called:
+                await plugin.async_ready(v, plugin.get_logger(v), value=_get_plugin_value(plugin, v))
                 logger.debug('SAF: async_ready for plugin: %s', plugin.name())
-                await coro
                 plugin._async_ready_called = True
         except Exception as e:
             logger.warning('Exception in async_ready for plugin "%s": %s', plugin.name(), e)
+            plugin._async_ready_called = True  # prevent duplicate invocation even on failure cases
 
 
 async def async_plugins_stopping(v: Variables = None):
@@ -493,14 +492,13 @@ async def async_plugins_stopping(v: Variables = None):
             continue
 
         try:
-            value = _get_plugin_value(plugin, v)
-            coro = plugin.async_stopping(v, plugin.get_logger(v), value)
-            if coro is not None and not plugin._async_stopping_called:
+            if not plugin._async_stopping_called:
+                await plugin.async_stopping(v, plugin.get_logger(v), value=_get_plugin_value(plugin, v))
                 logger.debug('SAF: async_stopping for plugin: %s', plugin.name())
-                await coro
-                plugin._async_stopping_called = True
+                plugin._async_stopping_called = True  # prevent duplicate invocation even on failure cases
         except Exception as e:
             logger.warning('Exception in async_stopping for plugin "%s": %s', plugin.name(), e)
+            plugin._async_stopping_called = True  # prevent duplicate invocation even on failure cases
 
 
 def schedule_async_shutdown(v: Variables = None, timeout: float = 5.0) -> bool:
