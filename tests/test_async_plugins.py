@@ -22,6 +22,7 @@ from scitrera_app_framework.core import (
     register_plugin, get_extension, shutdown_all_plugins, init_framework,
     async_plugins_ready, async_plugins_stopping, schedule_async_shutdown,
     capture_async_loop, get_captured_async_loop, clear_async_loop_ref,
+    set_async_auto_enabled, init_all_plugins,
 )
 
 
@@ -1029,3 +1030,102 @@ class TestAutoVsManualAsyncModes:
         # Second manual call - should be skipped
         await async_plugins_stopping(fresh_variables)
         assert plugin.call_log.count('async_stopping') == 1
+
+
+# =============================================================================
+# Test: Async Auto-Enabled Configuration
+# =============================================================================
+
+class TestAsyncAutoEnabledConfig:
+    """Test set_async_auto_enabled and async_enabled parameter behavior."""
+
+    @pytest.mark.asyncio
+    async def test_async_auto_enabled_default_is_true(self, fresh_variables):
+        """By default, async auto-handling is enabled."""
+        capture_async_loop(fresh_variables)
+        plugin = register_plugin(EagerAsyncPlugin, fresh_variables, init=True)
+        await asyncio.sleep(0.01)
+        # With auto enabled (default), async_ready should be scheduled
+        assert plugin._async_ready_called
+
+    @pytest.mark.asyncio
+    async def test_set_async_auto_enabled_false_disables_auto(self, fresh_variables):
+        """Setting async_auto_enabled to False disables automatic handling."""
+        capture_async_loop(fresh_variables)
+        set_async_auto_enabled(False, fresh_variables)
+
+        plugin = register_plugin(EagerAsyncPlugin, fresh_variables, init=True)
+        await asyncio.sleep(0.01)
+
+        # With auto disabled, async_ready should NOT be called automatically
+        assert not plugin._async_ready_called
+        assert 'async_ready' not in plugin.call_log
+
+    @pytest.mark.asyncio
+    async def test_manual_still_works_when_auto_disabled(self, fresh_variables):
+        """Manual async_plugins_ready works even when auto is disabled."""
+        set_async_auto_enabled(False, fresh_variables)
+
+        plugin = register_plugin(EagerAsyncPlugin, fresh_variables, init=True)
+        assert not plugin._async_ready_called
+
+        # Manual call should still work
+        await async_plugins_ready(fresh_variables)
+        assert plugin._async_ready_called
+        assert 'async_ready' in plugin.call_log
+
+    @pytest.mark.asyncio
+    async def test_shutdown_respects_async_enabled_false(self, fresh_variables):
+        """shutdown_all_plugins respects async_auto_enabled=False."""
+        capture_async_loop(fresh_variables)
+        set_async_auto_enabled(False, fresh_variables)
+
+        plugin = register_plugin(EagerAsyncPlugin, fresh_variables, init=True)
+        await async_plugins_ready(fresh_variables)  # Manual ready
+
+        shutdown_all_plugins(fresh_variables)
+        await asyncio.sleep(0.01)
+
+        # async_stopping should NOT be called automatically
+        assert not plugin._async_stopping_called
+
+    @pytest.mark.asyncio
+    async def test_async_enabled_param_overrides_global_true(self, fresh_variables):
+        """async_enabled=True param overrides global False setting."""
+        capture_async_loop(fresh_variables)
+        set_async_auto_enabled(False, fresh_variables)  # Global off
+
+        plugin = register_plugin(EagerAsyncPlugin, fresh_variables)
+        # Use init_all_plugins with explicit async_enabled=True
+        init_all_plugins(fresh_variables, async_enabled=True)
+        await asyncio.sleep(0.01)
+
+        # Should be called because param overrides global
+        assert plugin._async_ready_called
+
+    @pytest.mark.asyncio
+    async def test_async_enabled_param_overrides_global_false(self, fresh_variables):
+        """async_enabled=False param overrides global True setting."""
+        capture_async_loop(fresh_variables)
+        # Global is True by default
+
+        plugin = register_plugin(EagerAsyncPlugin, fresh_variables)
+        init_all_plugins(fresh_variables, async_enabled=False)
+        await asyncio.sleep(0.01)
+
+        # Should NOT be called because param overrides global
+        assert not plugin._async_ready_called
+
+    @pytest.mark.asyncio
+    async def test_shutdown_async_enabled_param_override(self, fresh_variables):
+        """shutdown_all_plugins async_enabled param overrides global."""
+        capture_async_loop(fresh_variables)
+        plugin = register_plugin(EagerAsyncPlugin, fresh_variables, init=True)
+        await async_plugins_ready(fresh_variables)
+
+        # Global is True, but pass False to shutdown
+        shutdown_all_plugins(fresh_variables, async_enabled=False)
+        await asyncio.sleep(0.01)
+
+        assert not plugin._async_stopping_called
+        assert 'shutdown' in plugin.call_log

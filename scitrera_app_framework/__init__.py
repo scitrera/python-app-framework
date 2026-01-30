@@ -43,6 +43,10 @@ def init_framework(*args, **kwargs) -> Variables:
         from .ext_plugins.multi_tenant import MultiTenantPlugin
         register_plugin(MultiTenantPlugin, v, init=True)
 
+    # manage whether async plugins are auto-enabled
+    from .core.plugins import set_async_auto_enabled
+    set_async_auto_enabled(v.environ('SAF_ASYNC_AUTO_MODE', default=kwargs.pop('async_auto_enabled', True), type_fn=ext_parse_bool))
+
     return v
 
 

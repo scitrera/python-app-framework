@@ -23,6 +23,23 @@ When an event loop has been captured (via `capture_async_loop()` or `async_plugi
 - **Same thread as event loop**: Uses `loop.create_task()` (fire-and-forget, non-blocking)
 - **Different thread**: Uses `run_coroutine_threadsafe().result()` (blocks until complete)
 
+### Configuring Automatic Mode
+
+Automatic async handling is **enabled by default**. You can disable it globally or per-call:
+
+```python
+from scitrera_app_framework.core import set_async_auto_enabled, init_all_plugins, shutdown_all_plugins
+
+# Disable globally
+set_async_auto_enabled(False, v)
+
+# Or override per-call
+init_all_plugins(v, async_enabled=False)      # Disable for this call
+shutdown_all_plugins(v, async_enabled=True)   # Enable for this call (overrides global)
+```
+
+When automatic mode is disabled, you must use manual mode (`async_plugins_ready()` / `async_plugins_stopping()`) for async lifecycle handling.
+
 ### Manual Mode (Explicit Await)
 
 For guaranteed ordering and completion, explicitly call the async lifecycle functions:
@@ -282,6 +299,29 @@ Get the previously captured event loop reference.
 Clear the captured async loop reference and thread ID.
 
 - **v**: Variables instance (uses default if None)
+
+#### `set_async_auto_enabled(enabled, v=None)`
+
+Enable or disable automatic async lifecycle handling globally.
+
+- **enabled**: Boolean to enable (True) or disable (False) automatic handling
+- **v**: Variables instance (uses default if None)
+
+When disabled, `async_ready()` and `async_stopping()` are not called automatically during plugin init/shutdown. Use `async_plugins_ready()` and `async_plugins_stopping()` manually instead.
+
+#### `init_all_plugins(v=None, async_enabled=None)`
+
+Initialize all registered plugins.
+
+- **v**: Variables instance (uses default if None)
+- **async_enabled**: Override global async auto-handling setting for this call. `None` uses global setting.
+
+#### `shutdown_all_plugins(v=None, async_enabled=None)`
+
+Shutdown all initialized plugins in reverse order.
+
+- **v**: Variables instance (uses default if None)
+- **async_enabled**: Override global async auto-handling setting for this call. `None` uses global setting.
 
 #### `schedule_async_shutdown(v=None, timeout=5.0) -> bool`
 

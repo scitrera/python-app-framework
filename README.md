@@ -26,7 +26,7 @@ Key capabilities:
 
 - Variables and configuration abstraction with layered sources and ergonomic access.
 - Structured logging integration with simple JSON formatting option.
-- Plugin and extension registry supporting both single and multi-extension modes.
+- Plugin and extension registry supporting both single and multi-extension modes, with optional async lifecycle hooks.
 - Optional stateful working directory management (e.g., for containerized or desktop apps).
 - Background execution plugin backed by thread pool.
 - Optional profiling integration via Pyroscope plugin.
@@ -120,6 +120,49 @@ register_plugin(ImplB)
 print(get_extensions(EXT))  # ['A', 'B']
 ```
 
+Async plugin lifecycle (for asyncio applications):
+
+```python
+import asyncio
+from scitrera_app_framework import init_framework, register_plugin, shutdown_all_plugins
+from scitrera_app_framework.core import async_plugins_ready, async_plugins_stopping
+from scitrera_app_framework.api import Plugin, Variables
+
+class AsyncDatabasePlugin(Plugin):
+    def extension_point_name(self, v):
+        return 'database'
+
+    def initialize(self, v, logger):
+        self._pool = None
+        return {'host': v.environ('DB_HOST', default='localhost')}
+
+    async def async_ready(self, v, logger, value):
+        """Called after init - establish async connections."""
+        # self._pool = await create_pool(...)
+        logger.info('Database pool ready')
+
+    async def async_stopping(self, v, logger, value):
+        """Called before shutdown - graceful async cleanup."""
+        # if self._pool: await self._pool.close()
+        logger.info('Database pool closed')
+
+async def main():
+    v = init_framework('async-app')
+    register_plugin(AsyncDatabasePlugin, v, init=True)
+
+    await async_plugins_ready(v)  # Calls async_ready on all plugins
+    try:
+        # Run your async application
+        await asyncio.sleep(1)
+    finally:
+        await async_plugins_stopping(v)  # Calls async_stopping
+        shutdown_all_plugins(v)
+
+asyncio.run(main())
+```
+
+See `docs/async_plugins.md` for full documentation on automatic vs manual async handling modes.
+
 ## Entry Points and Scripts
 
 - Primary usage is as a Python library you import into your own application.
@@ -140,6 +183,10 @@ print(get_extensions(EXT))  # ['A', 'B']
     - `register_plugin(PluginType, v=None, init=False)`
     - `get_extension(ext_name_or_type, v=None)` for single extension
     - `get_extensions(ext_name_or_type, v=None)` for multi-extension
+    - Async lifecycle (for asyncio apps):
+        - `async_plugins_ready(v)` – call `async_ready()` on all plugins
+        - `async_plugins_stopping(v)` – call `async_stopping()` on all plugins
+        - `set_async_auto_enabled(enabled, v)` – enable/disable automatic async handling
     - Built-ins:
         - Background executor: `EXT_BACKGROUND_EXEC` and `get_background_exec()`
         - Pyroscope profiling: `ext_plugins.pyroscope_plugin.PyroscopePlugin`

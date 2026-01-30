@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import threading
 from logging import Logger
-from typing import Type, Iterable, Any
+from typing import Type, Iterable, Any, Optional
 
 from ..api import Variables, Plugin
 from .core import _get_default_vars_instance, get_logger
@@ -49,9 +49,11 @@ def _find_plugin_for_single_ext(ext_name: str, v: Variables = None):
     return None, None
 
 
-def _init_plugin(name, v: Variables = None, _requested_by=None, _now=False, async_enabled=True):
+def _init_plugin(name, v: Variables = None, _requested_by=None, _now=False, async_enabled: Optional[bool] = None):
     if v is None:
         v = _get_default_vars_instance()
+    if async_enabled is None:
+        async_enabled = _is_async_auto_enabled(v)
 
     pr = _plugin_registry(v)
     plugin = pr.get(name, local=True)  # type: Plugin
@@ -142,9 +144,11 @@ def _init_plugin(name, v: Variables = None, _requested_by=None, _now=False, asyn
     return result
 
 
-def shutdown_all_plugins(v: Variables = None):
+def shutdown_all_plugins(v: Variables = None, async_enabled: Optional[bool] = None):
     if v is None:
         v = _get_default_vars_instance()
+    if async_enabled is None:
+        async_enabled = _is_async_auto_enabled(v)
 
     pr = _plugin_registry(v)
     er = _impl_registry(v)
@@ -163,24 +167,25 @@ def shutdown_all_plugins(v: Variables = None):
                     logger.warning('Unable to find value for extension point: %s', ext_name)
                     value = None
 
-                # automatically handle async stopping IF:
-                # 1. it hasn't been called before
-                # 2. there's a captured async loop
-                # If in the loop thread, we schedule without blocking (fire-and-forget).
-                # If in a different thread, we can safely block and wait for completion.
-                # For guaranteed ordering, users should await async_plugins_stopping() explicitly.
-                loop = get_captured_async_loop(v)
-                if not plugin._async_stopping_called and loop is not None:
-                    coro = plugin.async_stopping(v, logger, value)
-                    if _is_in_loop_thread(v):
-                        # Same thread as loop - schedule without blocking (fire-and-forget)
-                        loop.create_task(coro)
-                    else:
-                        # Different thread - safe to block and wait
-                        timeout = v.get('=|ASYNC_PLUGIN_STOPPING_TIMEOUT|', default=None)
-                        future = asyncio.run_coroutine_threadsafe(coro, loop)
-                        future.result(timeout=timeout)
-                    plugin._async_stopping_called = True
+                if async_enabled:
+                    # automatically handle async stopping IF:
+                    # 1. it hasn't been called before
+                    # 2. there's a captured async loop
+                    # If in the loop thread, we schedule without blocking (fire-and-forget).
+                    # If in a different thread, we can safely block and wait for completion.
+                    # For guaranteed ordering, users should await async_plugins_stopping() explicitly.
+                    loop = get_captured_async_loop(v)
+                    if not plugin._async_stopping_called and loop is not None:
+                        coro = plugin.async_stopping(v, logger, value)
+                        if _is_in_loop_thread(v):
+                            # Same thread as loop - schedule without blocking (fire-and-forget)
+                            loop.create_task(coro)
+                        else:
+                            # Different thread - safe to block and wait
+                            timeout = v.get('=|ASYNC_PLUGIN_STOPPING_TIMEOUT|', default=None)
+                            future = asyncio.run_coroutine_threadsafe(coro, loop)
+                            future.result(timeout=timeout)
+                        plugin._async_stopping_called = True
 
                 plugin.shutdown(v, plugin.get_logger(v), value)
             except Exception as e:
@@ -288,12 +293,14 @@ def get_extensions(extension_point: str | Type[Plugin], v: Variables = None) -> 
     return result
 
 
-def init_all_plugins(v: Variables = None, async_enabled=True):
+def init_all_plugins(v: Variables = None, async_enabled: Optional[bool] = None):
     if v is None:
         v = _get_default_vars_instance()
+    if async_enabled is None:
+        async_enabled = _is_async_auto_enabled(v)
     pr = _plugin_registry(v)
     for name in pr.keys():
-        _init_plugin(name, v=v, async_enabled=True)
+        _init_plugin(name, v=v, async_enabled=async_enabled)
     return
 
 
@@ -342,6 +349,19 @@ set_implementation = set_extension
 # -----------------------------------------------------------------------------
 # Async Lifecycle Functions
 # -----------------------------------------------------------------------------
+
+def _is_async_auto_enabled(v: Variables = None) -> bool:
+    if v is None:
+        v = _get_default_vars_instance()
+    return v.get('=|ASYNC_PLUGIN_LIFECYCLE_AUTO|', default=True)
+
+
+def set_async_auto_enabled(enabled: bool, v: Variables = None):
+    if v is None:
+        v = _get_default_vars_instance()
+    v.set('=|ASYNC_PLUGIN_LIFECYCLE_AUTO|', enabled)
+    return
+
 
 def _get_plugin_value(plugin: Plugin, v: Variables):
     """Helper to retrieve the extension point value for a plugin."""
