@@ -10,6 +10,8 @@ from .variables import Variables as Variables, NOT_SET
 class Plugin(object):
     collected: bool = False  # whether this plugin has been registered to plugin and extension registry
     initialized: bool = False  # whether this plugin has run its `initialize` method
+    _async_ready_called: bool = False  # whether this plugin has run its `async_ready` method
+    _async_stopping_called: bool = False  # whether this plugin has run its `async_stopping` method
     eager: bool = True  # whether this plugin defers running `initialize` until extension point requested or eagerly upon init call
 
     # TODO: is_single_/is_multi_extension could be set as class fields rather than as methods?
@@ -103,6 +105,58 @@ class Plugin(object):
         Each plugin can also have a shutdown method that declares how it should be safely shutdown
         """
         return
+
+    # -------------------------------------------------------------------------
+    # Async Lifecycle Hooks (Optional)
+    # -------------------------------------------------------------------------
+    # These methods provide optional async lifecycle support for plugins that need
+    # to perform async operations (e.g., establishing database connections, starting
+    # async tasks, etc.). They are called by the framework when running in an async
+    # context via `async_plugins_ready()` and `async_plugins_stopping()`.
+    #
+    # The sync `initialize()` and `shutdown()` methods remain the primary lifecycle
+    # methods. These async hooks are additive and do not replace them.
+    # -------------------------------------------------------------------------
+
+    async def async_ready(self, v: Variables, logger: Logger, value: object | None) -> None:
+        """
+        Optional async hook called after all plugins have been initialized, when running
+        in an async context. Use this for async resource acquisition such as:
+        - Establishing database connection pools
+        - Starting background async tasks
+        - Opening async network connections/sessions
+
+        This is called AFTER `initialize()` completes. The `value` parameter is the
+        return value from `initialize()`.
+
+        Override this method to perform async setup. The default implementation
+        does nothing.
+
+        :param v: variables instance
+        :param logger: logger for this plugin
+        :param value: the value returned by initialize()
+        """
+        pass
+
+    async def async_stopping(self, v: Variables, logger: Logger, value: object | None) -> None:
+        """
+        Optional async hook called before shutdown begins, when running in an async
+        context. Use this for graceful async cleanup such as:
+        - Draining message queues
+        - Closing async connections gracefully
+        - Cancelling and awaiting background tasks
+
+        This is called BEFORE `shutdown()`. The `value` parameter is the extension
+        point value (same as passed to shutdown).
+
+        Override this method to perform async teardown. The default implementation
+        does nothing.
+
+        :param v: variables instance
+        :param logger: logger for this plugin
+        :param value: the extension point value
+        """
+        pass
 
 
 def enabled_option_pattern(plugin: Plugin, v: Variables, env_variable: str, default: str = NOT_SET, self_attr: str = None) -> bool:

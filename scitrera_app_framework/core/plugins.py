@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import asyncio
+import threading
 from logging import Logger
 from typing import Type, Iterable, Any
 
 from ..api import Variables, Plugin
 from .core import _get_default_vars_instance, get_logger
+
+_VAR_ASYNC_LOOP = '=|async_loop|'
+_VAR_ASYNC_LOOP_THREAD = '=|async_loop_thread|'
 
 _NOT_INIT = object()
 
@@ -100,6 +105,25 @@ def _init_plugin(name, v: Variables = None, _requested_by=None, _now=False):
         logger.debug('initializing plugin "%s" for extension point "%s", multi=%s', name, ext_name, is_multi)
         value = plugin.initialize(v, plugin.get_logger(v))
         plugin.initialized = True
+
+        # if the plugin has an async_ready method, we can call it automatically IF:
+        # 1. it hasn't been called before
+        # 2. there's a captured async loop
+        # If in the loop thread, we schedule without blocking (fire-and-forget).
+        # If in a different thread, we can safely block and wait for completion.
+        # For guaranteed ordering, users should await async_plugins_ready() explicitly.
+        loop = get_captured_async_loop(v)
+        if not plugin._async_ready_called and loop is not None:
+            coro = plugin.async_ready(v, logger, value)
+            if _is_in_loop_thread(v):
+                # Same thread as loop - schedule without blocking (fire-and-forget)
+                loop.create_task(coro)
+            else:
+                # Different thread - safe to block and wait
+                timeout = v.get('=|ASYNC_PLUGIN_READY_TIMEOUT|', default=None)
+                future = asyncio.run_coroutine_threadsafe(coro, loop)
+                future.result(timeout=timeout)
+            plugin._async_ready_called = True
     else:
         value = None
 
@@ -136,6 +160,26 @@ def shutdown_all_plugins(v: Variables = None):
                 else:
                     logger.warning('Unable to find value for extension point: %s', ext_name)
                     value = None
+
+                # automatically handle async stopping IF:
+                # 1. it hasn't been called before
+                # 2. there's a captured async loop
+                # If in the loop thread, we schedule without blocking (fire-and-forget).
+                # If in a different thread, we can safely block and wait for completion.
+                # For guaranteed ordering, users should await async_plugins_stopping() explicitly.
+                loop = get_captured_async_loop(v)
+                if not plugin._async_stopping_called and loop is not None:
+                    coro = plugin.async_stopping(v, logger, value)
+                    if _is_in_loop_thread(v):
+                        # Same thread as loop - schedule without blocking (fire-and-forget)
+                        loop.create_task(coro)
+                    else:
+                        # Different thread - safe to block and wait
+                        timeout = v.get('=|ASYNC_PLUGIN_STOPPING_TIMEOUT|', default=None)
+                        future = asyncio.run_coroutine_threadsafe(coro, loop)
+                        future.result(timeout=timeout)
+                    plugin._async_stopping_called = True
+
                 plugin.shutdown(v, plugin.get_logger(v), value)
             except Exception as e:
                 logger.warning('Exception while shutting down plugin "%s" at extension point "%s": %s', name, ext_name, e)
@@ -291,3 +335,180 @@ def set_extension(extension_point: str, init_fn, shutdown_fn=None, dependencies=
 
 
 set_implementation = set_extension
+
+
+# -----------------------------------------------------------------------------
+# Async Lifecycle Functions
+# -----------------------------------------------------------------------------
+
+def _get_plugin_value(plugin: Plugin, v: Variables):
+    """Helper to retrieve the extension point value for a plugin."""
+    er = _impl_registry(v)
+    ext_name = plugin.extension_point_name(v)
+    if plugin.is_enabled(v):
+        entry = er.get(ext_name)
+        if entry:
+            return entry[1]
+    elif plugin.is_multi_extension(v):
+        entry = _multi_ext_options(ext_name, v).get(plugin.name())
+        if entry:
+            return entry[1]
+    return None
+
+
+def capture_async_loop(v: Variables = None, first_time_only: bool = False) -> asyncio.AbstractEventLoop | None:
+    """
+    Capture a reference to the currently running asyncio event loop.
+    Call this from within an async context to enable async shutdown support.
+
+    Returns the captured loop, or None if not in an async context.
+    """
+    if v is None:
+        v = _get_default_vars_instance()
+    try:
+        loop = asyncio.get_running_loop()
+        thread_id = threading.current_thread().ident
+        if first_time_only:  # only set if not already set
+            v.get_or_set(_VAR_ASYNC_LOOP, lambda: loop)
+            v.get_or_set(_VAR_ASYNC_LOOP_THREAD, lambda: thread_id)
+        else:
+            v.set(_VAR_ASYNC_LOOP, loop)
+            v.set(_VAR_ASYNC_LOOP_THREAD, thread_id)
+        return loop
+    except RuntimeError:
+        return None
+
+
+def _is_in_loop_thread(v: Variables = None) -> bool:
+    """
+    Check if the current thread is the same thread where the async loop was captured.
+    Returns False if no loop was captured or if we're in a different thread.
+    """
+    if v is None:
+        v = _get_default_vars_instance()
+    captured_thread_id = v.get(_VAR_ASYNC_LOOP_THREAD)
+    if captured_thread_id is None:
+        return False
+    return threading.current_thread().ident == captured_thread_id
+
+
+def get_captured_async_loop(v: Variables = None) -> asyncio.AbstractEventLoop | None:
+    """
+    Get the previously captured async event loop reference.
+    Returns None if no loop was captured or if the loop is closed.
+    """
+    if v is None:
+        v = _get_default_vars_instance()
+    async_loop_ref = v.get(_VAR_ASYNC_LOOP)
+    if async_loop_ref is not None and not async_loop_ref.is_closed():
+        return async_loop_ref
+    return None
+
+
+def clear_async_loop_ref(v: Variables = None):
+    """Clear the captured async loop reference and thread ID."""
+    if v is None:
+        v = _get_default_vars_instance()
+    v.set(_VAR_ASYNC_LOOP, None)
+    v.set(_VAR_ASYNC_LOOP_THREAD, None)
+
+
+async def async_plugins_ready(v: Variables = None, *, capture_loop: bool = True):
+    """
+    Signal all initialized plugins that the application is ready for async operations.
+    Call this after framework initialization, from within an async context.
+
+    This will call `async_ready()` on each initialized plugin in startup order.
+    Plugins that don't override `async_ready()` will be skipped (returns None).
+
+    :param v: variables instance (uses default if None)
+    :param capture_loop: whether to capture the current event loop for later use (default True)
+    """
+    if v is None:
+        v = _get_default_vars_instance()
+
+    if capture_loop:
+        capture_async_loop(v)
+
+    logger = get_logger(v)
+    pr = _plugin_registry(v)
+    startup_order = pr.get_or_set('=|STARTUP_ORDER|', value_fn=list)
+
+    for plugin in startup_order:  # type: Plugin
+        if not plugin.initialized:
+            continue
+
+        try:
+            value = _get_plugin_value(plugin, v)
+            coro = plugin.async_ready(v, plugin.get_logger(v), value)
+            if coro is not None and not plugin._async_ready_called:
+                logger.debug('SAF: async_ready for plugin: %s', plugin.name())
+                await coro
+                plugin._async_ready_called = True
+        except Exception as e:
+            logger.warning('Exception in async_ready for plugin "%s": %s', plugin.name(), e)
+
+
+async def async_plugins_stopping(v: Variables = None):
+    """
+    Signal all initialized plugins that the application is stopping.
+    Call this before shutdown_all_plugins(), from within an async context.
+
+    This will call `async_stopping()` on each initialized plugin in reverse startup order.
+    Plugins that don't override `async_stopping()` will be skipped (returns None).
+
+    :param v: variables instance (uses default if None)
+    """
+    if v is None:
+        v = _get_default_vars_instance()
+
+    logger = get_logger(v)
+    pr = _plugin_registry(v)
+    startup_order = pr.get_or_set('=|STARTUP_ORDER|', value_fn=list)
+
+    for plugin in reversed(startup_order):  # type: Plugin
+        if not plugin.initialized:
+            continue
+
+        try:
+            value = _get_plugin_value(plugin, v)
+            coro = plugin.async_stopping(v, plugin.get_logger(v), value)
+            if coro is not None and not plugin._async_stopping_called:
+                logger.debug('SAF: async_stopping for plugin: %s', plugin.name())
+                await coro
+                plugin._async_stopping_called = True
+        except Exception as e:
+            logger.warning('Exception in async_stopping for plugin "%s": %s', plugin.name(), e)
+
+
+def schedule_async_shutdown(v: Variables = None, timeout: float = 5.0) -> bool:
+    """
+    Attempt to schedule async_plugins_stopping() on the captured event loop.
+    This is useful when shutdown is triggered from a sync context (e.g., signal handler)
+    but async cleanup is still desired.
+
+    This function is non-blocking and thread-safe. It schedules the coroutine
+    on the captured loop using run_coroutine_threadsafe.
+
+    :param v: variables instance (uses default if None)
+    :param timeout: maximum time to wait for async shutdown to complete (seconds)
+    :return: True if async shutdown was scheduled and completed, False otherwise
+    """
+    loop = get_captured_async_loop(v)
+    if loop is None:
+        return False
+
+    if loop.is_closed():
+        clear_async_loop_ref(v)
+        return False
+
+    try:
+        future = asyncio.run_coroutine_threadsafe(async_plugins_stopping(v), loop)
+        future.result(timeout=timeout)
+        return True
+    except asyncio.TimeoutError:
+        get_logger(v).warning('Async shutdown timed out after %.1f seconds', timeout)
+        return False
+    except Exception as e:
+        get_logger(v).debug('Could not schedule async shutdown: %s', e)
+        return False

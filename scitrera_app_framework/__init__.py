@@ -5,6 +5,7 @@ from .core import (
     register_shutdown_function, get_logger, get_working_path, get_variables,
     get_extension, register_plugin, init_all_plugins, get_extensions,
     init_framework as _init_framework,
+    async_plugins_ready, async_plugins_stopping,
 )
 from .util import (
     ext_parse_bool, ext_parse_csv, ext_get_python,
