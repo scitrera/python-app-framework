@@ -49,7 +49,7 @@ def _find_plugin_for_single_ext(ext_name: str, v: Variables = None):
     return None, None
 
 
-def _init_plugin(name, v: Variables = None, _requested_by=None, _now=False):
+def _init_plugin(name, v: Variables = None, _requested_by=None, _now=False, async_enabled=True):
     if v is None:
         v = _get_default_vars_instance()
 
@@ -106,24 +106,26 @@ def _init_plugin(name, v: Variables = None, _requested_by=None, _now=False):
         value = plugin.initialize(v, plugin.get_logger(v))
         plugin.initialized = True
 
-        # if the plugin has an async_ready method, we can call it automatically IF:
-        # 1. it hasn't been called before
-        # 2. there's a captured async loop
-        # If in the loop thread, we schedule without blocking (fire-and-forget).
-        # If in a different thread, we can safely block and wait for completion.
-        # For guaranteed ordering, users should await async_plugins_ready() explicitly.
-        loop = get_captured_async_loop(v)
-        if not plugin._async_ready_called and loop is not None:
-            coro = plugin.async_ready(v, logger, value)
-            if _is_in_loop_thread(v):
-                # Same thread as loop - schedule without blocking (fire-and-forget)
-                loop.create_task(coro)
-            else:
-                # Different thread - safe to block and wait
-                timeout = v.get('=|ASYNC_PLUGIN_READY_TIMEOUT|', default=None)
-                future = asyncio.run_coroutine_threadsafe(coro, loop)
-                future.result(timeout=timeout)
-            plugin._async_ready_called = True
+        # try automatic async handling if possible (and enabled)
+        if async_enabled:
+            # if the plugin has an async_ready method, we can call it automatically IF:
+            # 1. it hasn't been called before
+            # 2. there's a captured async loop
+            # If in the loop thread, we schedule without blocking (fire-and-forget).
+            # If in a different thread, we can safely block and wait for completion.
+            # For guaranteed ordering, users should await async_plugins_ready() explicitly.
+            loop = get_captured_async_loop(v)
+            if not plugin._async_ready_called and loop is not None:
+                coro = plugin.async_ready(v, logger, value)
+                if _is_in_loop_thread(v):
+                    # Same thread as loop - schedule without blocking (fire-and-forget)
+                    loop.create_task(coro)
+                else:
+                    # Different thread - safe to block and wait
+                    timeout = v.get('=|ASYNC_PLUGIN_READY_TIMEOUT|', default=None)
+                    future = asyncio.run_coroutine_threadsafe(coro, loop)
+                    future.result(timeout=timeout)
+                plugin._async_ready_called = True
     else:
         value = None
 
@@ -286,12 +288,12 @@ def get_extensions(extension_point: str | Type[Plugin], v: Variables = None) -> 
     return result
 
 
-def init_all_plugins(v: Variables = None):
+def init_all_plugins(v: Variables = None, async_enabled=True):
     if v is None:
         v = _get_default_vars_instance()
     pr = _plugin_registry(v)
     for name in pr.keys():
-        _init_plugin(name, v=v)
+        _init_plugin(name, v=v, async_enabled=True)
     return
 
 
