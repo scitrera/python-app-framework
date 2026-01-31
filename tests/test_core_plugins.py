@@ -412,3 +412,247 @@ class TestDisabledPlugins:
         # With USE_ANOTHER=True, AnotherSimplePlugin should be selected
         result = get_extension("simple-ext", v)
         assert result["status"] == "another_initialized"
+
+
+class TestOnRegistration:
+    """Tests for on_registration hook."""
+
+    def test_on_registration_called(self, clean_env):
+        """Test that on_registration is called when plugin is registered."""
+        from scitrera_app_framework import init_framework_test_harness
+        from scitrera_app_framework.core.plugins import register_plugin
+
+        on_reg_calls = []
+
+        class OnRegPlugin(Plugin):
+            def extension_point_name(self, v):
+                return "onreg-ext"
+
+            def on_registration(self, v):
+                on_reg_calls.append(("registered", v))
+
+            def initialize(self, v, logger):
+                return "value"
+
+        v = init_framework_test_harness("test-app")
+        register_plugin(OnRegPlugin, v, init=False)
+
+        assert len(on_reg_calls) == 1
+        assert on_reg_calls[0][0] == "registered"
+        assert on_reg_calls[0][1] is v
+
+    def test_on_registration_called_before_initialize(self, clean_env):
+        """Test that on_registration is called before initialize."""
+        from scitrera_app_framework import init_framework_test_harness
+        from scitrera_app_framework.core.plugins import register_plugin
+
+        call_order = []
+
+        class OrderTestPlugin(Plugin):
+            def extension_point_name(self, v):
+                return "order-ext"
+
+            def on_registration(self, v):
+                call_order.append("on_registration")
+
+            def initialize(self, v, logger):
+                call_order.append("initialize")
+                return "value"
+
+        v = init_framework_test_harness("test-app")
+        register_plugin(OrderTestPlugin, v, init=True)
+
+        assert call_order == ["on_registration", "initialize"]
+
+    def test_on_registration_not_called_twice(self, clean_env):
+        """Test that on_registration is only called once per plugin, not on duplicate registration."""
+        from scitrera_app_framework import init_framework_test_harness
+        from scitrera_app_framework.core.plugins import register_plugin
+
+        on_reg_calls = []
+
+        class SingleRegPlugin(Plugin):
+            def extension_point_name(self, v):
+                return "singlereg-ext"
+
+            def on_registration(self, v):
+                on_reg_calls.append("called")
+
+            def initialize(self, v, logger):
+                return "value"
+
+        v = init_framework_test_harness("test-app")
+
+        # Register multiple times
+        register_plugin(SingleRegPlugin, v, init=False)
+        register_plugin(SingleRegPlugin, v, init=False)
+        register_plugin(SingleRegPlugin, v, init=True)
+
+        # on_registration should only be called once
+        assert len(on_reg_calls) == 1
+
+    def test_on_registration_default_noop(self, clean_env):
+        """Test that plugins without on_registration override work fine (backwards compatibility)."""
+        from scitrera_app_framework import init_framework_test_harness
+        from scitrera_app_framework.core.plugins import register_plugin, get_extension
+
+        v = init_framework_test_harness("test-app")
+
+        # SimplePlugin doesn't override on_registration
+        register_plugin(SimplePlugin, v, init=True)
+
+        # Should work normally
+        result = get_extension("simple-ext", v)
+        assert result["status"] == "initialized"
+
+    def test_on_registration_can_register_other_plugins(self, clean_env):
+        """Test that on_registration can register additional plugins."""
+        from scitrera_app_framework import init_framework_test_harness
+        from scitrera_app_framework.core.plugins import register_plugin, get_extension
+
+        class HelperPlugin(Plugin):
+            def extension_point_name(self, v):
+                return "helper-ext"
+
+            def initialize(self, v, logger):
+                return "helper_value"
+
+        class MainPlugin(Plugin):
+            def extension_point_name(self, v):
+                return "main-ext"
+
+            def on_registration(self, v):
+                # Register another plugin during on_registration
+                register_plugin(HelperPlugin, v, init=False)
+
+            def initialize(self, v, logger):
+                return "main_value"
+
+        v = init_framework_test_harness("test-app")
+        register_plugin(MainPlugin, v, init=True)
+
+        # Both plugins should be accessible
+        assert get_extension("main-ext", v) == "main_value"
+        assert get_extension("helper-ext", v) == "helper_value"
+
+    def test_on_registration_can_set_variables(self, clean_env):
+        """Test that on_registration can modify the Variables instance."""
+        from scitrera_app_framework import init_framework_test_harness
+        from scitrera_app_framework.core.plugins import register_plugin, get_extension
+
+        class ConfigPlugin(Plugin):
+            def extension_point_name(self, v):
+                return "config-ext"
+
+            def on_registration(self, v):
+                # Set some default configuration
+                v.set("CONFIG_DEFAULT", "default_value")
+
+            def initialize(self, v, logger):
+                return v.get("CONFIG_DEFAULT")
+
+        v = init_framework_test_harness("test-app")
+        register_plugin(ConfigPlugin, v, init=True)
+
+        result = get_extension("config-ext", v)
+        assert result == "default_value"
+
+    def test_on_registration_with_multi_extension(self, clean_env):
+        """Test that on_registration works with multi-extension plugins."""
+        from scitrera_app_framework import init_framework_test_harness
+        from scitrera_app_framework.core.plugins import register_plugin, get_extensions
+
+        on_reg_calls = []
+
+        class MultiRegPlugin1(Plugin):
+            def extension_point_name(self, v):
+                return "multireg-ext"
+
+            def is_multi_extension(self, v):
+                return True
+
+            def on_registration(self, v):
+                on_reg_calls.append("multi1")
+
+            def initialize(self, v, logger):
+                return "multi1_value"
+
+        class MultiRegPlugin2(Plugin):
+            def extension_point_name(self, v):
+                return "multireg-ext"
+
+            def is_multi_extension(self, v):
+                return True
+
+            def on_registration(self, v):
+                on_reg_calls.append("multi2")
+
+            def initialize(self, v, logger):
+                return "multi2_value"
+
+        v = init_framework_test_harness("test-app")
+        register_plugin(MultiRegPlugin1, v, init=True)
+        register_plugin(MultiRegPlugin2, v, init=True)
+
+        # Both on_registration hooks should be called
+        assert on_reg_calls == ["multi1", "multi2"]
+
+        # Both extensions should work
+        results = get_extensions("multireg-ext", v)
+        assert len(results) == 2
+
+    def test_on_registration_with_disabled_plugin(self, clean_env):
+        """Test that on_registration is called even for disabled plugins."""
+        from scitrera_app_framework import init_framework_test_harness
+        from scitrera_app_framework.core.plugins import register_plugin
+
+        on_reg_calls = []
+
+        class DisabledRegPlugin(Plugin):
+            def extension_point_name(self, v):
+                return "disabledreg-ext"
+
+            def is_enabled(self, v):
+                return False
+
+            def on_registration(self, v):
+                on_reg_calls.append("disabled_registered")
+
+            def initialize(self, v, logger):
+                return "should_not_init"
+
+        v = init_framework_test_harness("test-app")
+        register_plugin(DisabledRegPlugin, v, init=True)
+
+        # on_registration should still be called even though plugin is disabled
+        assert len(on_reg_calls) == 1
+        assert on_reg_calls[0] == "disabled_registered"
+
+    def test_on_registration_with_lazy_plugin(self, clean_env):
+        """Test that on_registration is called immediately for lazy plugins."""
+        from scitrera_app_framework import init_framework_test_harness
+        from scitrera_app_framework.core.plugins import register_plugin
+
+        call_order = []
+
+        class LazyRegPlugin(Plugin):
+            eager = False
+
+            def extension_point_name(self, v):
+                return "lazyreg-ext"
+
+            def on_registration(self, v):
+                call_order.append("on_registration")
+
+            def initialize(self, v, logger):
+                call_order.append("initialize")
+                return "lazy_value"
+
+        v = init_framework_test_harness("test-app")
+        register_plugin(LazyRegPlugin, v, init=False)
+
+        # on_registration should be called immediately upon registration
+        assert call_order == ["on_registration"]
+
+        # initialize should not be called yet (lazy)
+        assert "initialize" not in call_order

@@ -90,6 +90,23 @@ class Plugin(object):
         """
         return ()
 
+    # noinspection PyMethodMayBeStatic,PyUnusedLocal
+    def on_registration(self, v: Variables) -> None:
+        """
+        Optional hook called once when the plugin is first registered/collected,
+        before initialization. This is called only once per plugin instance,
+        regardless of how many times register_plugin is called.
+
+        Use this for early setup that needs to happen before initialization,
+        such as registering additional plugins, setting up environment defaults,
+        or other preparatory actions.
+
+        The default implementation does nothing.
+
+        :param v: the variables/environment instance
+        """
+        pass
+
     @abstractmethod
     def initialize(self, v: Variables, logger: Logger) -> object | None:
         """

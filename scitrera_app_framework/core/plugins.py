@@ -216,6 +216,9 @@ def register_plugin(plugin_type: Type[Plugin], v: Variables = None, init=False):
                             name, ext_name, is_single, is_multi)
         pr[name] = instance
 
+        # call on_registration hook (only called once, on first registration)
+        instance.on_registration(v)
+
         # add to implementations registry to keep record of it
         _impl_options((ext_name := instance.extension_point_name(v)), v=v).add(instance)
 
