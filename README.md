@@ -183,6 +183,10 @@ See `docs/async_plugins.md` for full documentation on automatic vs manual async 
     - `register_plugin(PluginType, v=None, init=False)`
     - `get_extension(ext_name_or_type, v=None)` for single extension
     - `get_extensions(ext_name_or_type, v=None)` for multi-extension
+    - Plugin lifecycle hooks:
+        - `on_registration(v)` – called once when plugin is first registered (before initialization)
+        - `initialize(v, logger)` – main initialization, returns extension point value
+        - `shutdown(v, logger, value)` – cleanup on shutdown
     - Async lifecycle (for asyncio apps):
         - `async_plugins_ready(v)` – call `async_ready()` on all plugins
         - `async_plugins_stopping(v)` – call `async_stopping()` on all plugins
