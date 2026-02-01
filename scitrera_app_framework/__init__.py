@@ -21,6 +21,7 @@ from .core.util import add_env_file_source
 def init_framework(*args, **kwargs) -> Variables:
     register_base_plugins = kwargs.pop('base_plugins', False)
     enable_pyroscope = kwargs.pop('pyroscope', False)
+    async_auto_enabled = kwargs.pop('async_auto_enabled', True)
 
     v = _init_framework(*args, **kwargs)
 
@@ -45,7 +46,7 @@ def init_framework(*args, **kwargs) -> Variables:
 
     # manage whether async plugins are auto-enabled
     from .core.plugins import set_async_auto_enabled
-    set_async_auto_enabled(v.environ('SAF_ASYNC_AUTO_MODE', default=kwargs.pop('async_auto_enabled', True), type_fn=ext_parse_bool))
+    set_async_auto_enabled(v.environ('SAF_ASYNC_AUTO_MODE', default=async_auto_enabled, type_fn=ext_parse_bool))
 
     return v
 
